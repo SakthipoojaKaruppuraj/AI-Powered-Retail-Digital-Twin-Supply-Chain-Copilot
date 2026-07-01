@@ -1,0 +1,124 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --color-bg-main: #e8e5dd;
+  --color-text-main: #2a3723;
+  --color-border-main: #b9bba8;
+}
+
+:root {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color-scheme: light;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Outfit', sans-serif;
+  color: #2a3723;
+}
+
+body {
+  background-color: #e8e5dd; /* Warm Sand background */
+  color: #2a3723; /* Forest Green text */
+  overflow-x: hidden;
+  margin: 0;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(185, 187, 168, 0.2);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(42, 55, 35, 0.25);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(42, 55, 35, 0.45);
+}
+
+/* Custom animations */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(42, 55, 35, 0.15), inset 0 0 10px rgba(42, 55, 35, 0.05);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(42, 55, 35, 0.35), inset 0 0 15px rgba(42, 55, 35, 0.1);
+  }
+}
+
+@keyframes pulse-red-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(220, 38, 38, 0.2), inset 0 0 5px rgba(220, 38, 38, 0.05);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(220, 38, 38, 0.5), inset 0 0 15px rgba(220, 38, 38, 0.15);
+  }
+}
+
+@keyframes pulse-green-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(22, 163, 74, 0.2), inset 0 0 5px rgba(22, 163, 74, 0.05);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(22, 163, 74, 0.5), inset 0 0 15px rgba(22, 163, 74, 0.15);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2.5s infinite;
+}
+
+.animate-pulse-red {
+  animation: pulse-red-glow 2s infinite;
+}
+
+.animate-pulse-green {
+  animation: pulse-green-glow 2s infinite;
+}
+
+/* Glassmorphism panel styling (Light Theme Custom) */
+.glass-panel {
+  background: rgba(232, 229, 221, 0.65); /* Warm sand glass */
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(185, 187, 168, 0.4); /* Sage green border */
+  box-shadow: 0 8px 32px 0 rgba(42, 55, 35, 0.06);
+}
+
+.glass-panel-light {
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(185, 187, 168, 0.2);
+}
+
+.glow-text-blue {
+  text-shadow: 0 0 10px rgba(37, 99, 235, 0.2);
+}
+
+.glow-text-emerald {
+  text-shadow: 0 0 10px rgba(22, 163, 74, 0.2);
+}
+
+.glow-text-rose {
+  text-shadow: 0 0 10px rgba(220, 38, 38, 0.2);
+}
+
+.glow-text-amber {
+  text-shadow: 0 0 10px rgba(217, 119, 6, 0.2);
+}
+
+/* Grid drawing for route planner */
+.grid-cell {
+  aspect-ratio: 1;
+  transition: all 0.2s ease-in-out;
+}
+
+.grid-cell:hover {
+  filter: brightness(0.9);
+}
