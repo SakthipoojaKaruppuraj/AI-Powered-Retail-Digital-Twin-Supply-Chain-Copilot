@@ -1,17 +1,21 @@
 {
   "name": "wms",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "server": "node server/server.js",
-    "build": "vite build",
+    "dev": "vite frontend",
+    "server": "node backend/server.js",
+    "build": "vite build frontend",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview frontend"
   },
   "dependencies": {
+    "@google/genai": "^2.20.0",
     "canvas-confetti": "^1.9.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^4.21.2",
     "lucide-react": "^1.23.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

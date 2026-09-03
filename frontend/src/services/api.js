@@ -67,6 +67,92 @@ export const api = {
     return res.json();
   },
 
+  // Phase 4 Operational Task Engine & AGV Orchestration API Client
+  async getTasks(status = '', type = '') {
+    const queryParams = new URLSearchParams();
+    if (status) queryParams.append('status', status);
+    if (type) queryParams.append('type', type);
+
+    const res = await fetch(`${API_BASE}/tasks?${queryParams.toString()}`);
+    if (!res.ok) throw new Error('Failed to fetch operational tasks');
+    return res.json();
+  },
+
+  async getTaskRecommendations() {
+    const res = await fetch(`${API_BASE}/tasks/recommendations`);
+    if (!res.ok) throw new Error('Failed to fetch task recommendations');
+    return res.json();
+  },
+
+  async getTaskById(taskId) {
+    const res = await fetch(`${API_BASE}/tasks/${taskId}`);
+    if (!res.ok) throw new Error('Failed to fetch task details');
+    return res.json();
+  },
+
+  async getTaskAudit(taskId) {
+    const res = await fetch(`${API_BASE}/tasks/${taskId}/audit`);
+    if (!res.ok) throw new Error('Failed to fetch task audit log');
+    return res.json();
+  },
+
+  async createTask(taskPayload) {
+    const res = await fetch(`${API_BASE}/tasks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(taskPayload)
+    });
+    if (!res.ok) throw new Error('Failed to create operational task');
+    return res.json();
+  },
+
+  async approveTask(taskId) {
+    const res = await fetch(`${API_BASE}/tasks/${taskId}/approve`, {
+      method: 'POST'
+    });
+    if (!res.ok) throw new Error('Failed to approve operational task');
+    return res.json();
+  },
+
+  async rejectTask(taskId, reason = '') {
+    const res = await fetch(`${API_BASE}/tasks/${taskId}/reject`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason })
+    });
+    if (!res.ok) throw new Error('Failed to reject operational task');
+    return res.json();
+  },
+
+  async assignTask(taskId) {
+    const res = await fetch(`${API_BASE}/tasks/${taskId}/assign`, {
+      method: 'POST'
+    });
+    if (!res.ok) throw new Error('Failed to assign task to AGV');
+    return res.json();
+  },
+
+  async executeTask(taskId) {
+    const res = await fetch(`${API_BASE}/tasks/${taskId}/execute`, {
+      method: 'POST'
+    });
+    if (!res.ok) {
+      const errJson = await res.json();
+      throw new Error(errJson.error || 'Failed to execute operational task');
+    }
+    return res.json();
+  },
+
+  async cancelTask(taskId, reason = '') {
+    const res = await fetch(`${API_BASE}/tasks/${taskId}/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason })
+    });
+    if (!res.ok) throw new Error('Failed to cancel task');
+    return res.json();
+  },
+
   // Deterministic Demand Forecasting REST API
   async getDemandForecast(product = '', modifiers = {}) {
     const queryParams = new URLSearchParams();

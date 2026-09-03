@@ -14,12 +14,14 @@ import { calculateDemandForecast } from './demandForecast.js';
 import { calculateExpiryIntelligence } from './expiryIntelligence.js';
 import { calculateOccupancyIntelligence } from './occupancyIntelligence.js';
 import { calculateSafetyIntelligence } from './safetyIntelligence.js';
+import { tasks, taskAuditTrail, getTaskRecommendations } from './taskEngine.js';
 
 /**
  * Classifies query intent based on keywords
  */
 export function classifyQueryIntent(message = '') {
   const q = message.toLowerCase();
+  if (q.includes('task') || q.includes('action') || q.includes('relocate') || q.includes('approve') || q.includes('assign') || q.includes('execute') || q.includes('audit log') || q.includes('work order')) return 'task';
   if (q.includes('safety') || q.includes('helmet') || q.includes('hazard') || q.includes('violation') || q.includes('ppe') || q.includes('exit') || q.includes('obstruction') || q.includes('compliance')) return 'safety';
   if (q.includes('occupancy') || q.includes('capacity') || q.includes('underutilized') || q.includes('overflow') || q.includes('near full') || q.includes('space') || q.includes('volume')) return 'occupancy';
   if (q.includes('expiry') || q.includes('expir') || q.includes('fefo') || q.includes('perishable') || q.includes('shelf life') || q.includes('dispatch first')) return 'expiry';
@@ -33,7 +35,7 @@ export function classifyQueryIntent(message = '') {
 
 /**
  * Builds server-authoritative context for Gemini based on live warehouseStore telemetry,
- * Demand Forecast, Expiry/FEFO, Occupancy, and Safety Intelligence.
+ * Demand Forecast, Expiry/FEFO, Occupancy, Safety, and Task Engine state.
  */
 export function buildCopilotContext(userMessage = '') {
   const intent = classifyQueryIntent(userMessage);
@@ -43,6 +45,7 @@ export function buildCopilotContext(userMessage = '') {
   const expiryData = calculateExpiryIntelligence();
   const occupancyData = calculateOccupancyIntelligence();
   const safetyData = calculateSafetyIntelligence();
+  const taskRecommendations = getTaskRecommendations();
 
   const baseContext = {
     facility: {
@@ -51,12 +54,29 @@ export function buildCopilotContext(userMessage = '') {
       status: warehouse.status
     },
     forecastHorizonDays: 7,
-    intentCategory: intent
+    intentCategory: intent,
+    activeTaskCounts: {
+      totalTasks: tasks.length,
+      pendingTasks: tasks.filter(t => t.status === 'PENDING').length,
+      approvedTasks: tasks.filter(t => t.status === 'APPROVED').length,
+      assignedTasks: tasks.filter(t => t.status === 'ASSIGNED').length,
+      completedTasks: tasks.filter(t => t.status === 'COMPLETED').length,
+      blockedTasks: tasks.filter(t => t.status === 'BLOCKED').length
+    }
   };
 
   const highRiskShelves = forecastData.products.filter(p => p.stockoutRisk === 'CRITICAL' || p.stockoutRisk === 'HIGH');
 
   switch (intent) {
+    case 'task':
+      return {
+        ...baseContext,
+        taskRecommendations,
+        allTasks: tasks,
+        recentAuditLogs: taskAuditTrail.slice(-10),
+        agvFleet: agvs.map(a => ({ agvId: a.agvId, name: a.name, status: a.status, battery: a.batteryLevel, activeTask: a.activeTask }))
+      };
+
     case 'safety':
       return {
         ...baseContext,
@@ -186,6 +206,7 @@ export function buildCopilotContext(userMessage = '') {
     default:
       return {
         ...baseContext,
+        taskRecommendations,
         safetySummary: safetyData.summary,
         highestSafetyRisk: safetyData.highestRiskLevel,
         inventoryCapacityOccupancy: occupancyData.inventoryCapacityOccupancy,
