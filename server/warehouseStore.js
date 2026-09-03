@@ -22,11 +22,12 @@ export const zones = [
   { zoneId: 'loading-dock', name: 'Loading Dock Gate 2', type: 'Staging', description: 'Inbound and outbound transport dock' }
 ];
 
-// Product Master Catalog
+// Product Master Catalog (Authoritative product data with SKUs and Barcodes)
 export let products = [
   {
     productId: 'PRD-MLK-01',
     sku: 'SKU-MLK-101',
+    barcode: '890123456789',
     name: 'Milk',
     category: 'Dairy',
     unitPrice: 60,
@@ -40,6 +41,7 @@ export let products = [
   {
     productId: 'PRD-CHS-02',
     sku: 'SKU-CHS-102',
+    barcode: '890987654321',
     name: 'Cheese',
     category: 'Dairy',
     unitPrice: 150,
@@ -53,6 +55,7 @@ export let products = [
   {
     productId: 'PRD-RCE-03',
     sku: 'SKU-RCE-103',
+    barcode: '890345678123',
     name: 'Rice',
     category: 'Grains',
     unitPrice: 80,
@@ -66,6 +69,7 @@ export let products = [
   {
     productId: 'PRD-WHT-04',
     sku: 'SKU-WHT-104',
+    barcode: '890765432198',
     name: 'Wheat',
     category: 'Grains',
     unitPrice: 70,
@@ -79,6 +83,7 @@ export let products = [
   {
     productId: 'PRD-LPT-05',
     sku: 'SKU-LPT-105',
+    barcode: '890456123789',
     name: 'Laptops',
     category: 'Electronics',
     unitPrice: 45000,
@@ -92,6 +97,7 @@ export let products = [
   {
     productId: 'PRD-PHN-06',
     sku: 'SKU-PHN-106',
+    barcode: '890987123456',
     name: 'Phones',
     category: 'Electronics',
     unitPrice: 25000,
@@ -220,7 +226,7 @@ export let shelves = [
   }
 ];
 
-// Computer Vision Camera Streams
+// Computer Vision Camera Streams (Raw Evidence Source)
 export let cameraData = {
   'cam-01': {
     cameraId: 'cam-01',
@@ -228,8 +234,8 @@ export let cameraData = {
     status: 'ACTIVE',
     lastScanTime: 'Just now',
     items: [
-      { name: 'Milk', cameraCount: 98, x: 20, y: 30, w: 25, h: 40, exp: '05-Jul-2026', barcode: '890123456789', isDamaged: false },
-      { name: 'Cheese', cameraCount: 15, x: 55, y: 35, w: 25, h: 30, exp: '15-Jul-2026', barcode: '890987654321', isDamaged: false }
+      { id: 'det-01', productId: 'PRD-MLK-01', sku: 'SKU-MLK-101', name: 'Milk', cameraCount: 98, x: 20, y: 30, w: 25, h: 40, exp: '05-Jul-2026', barcode: '890123456789', confidenceScore: 0.98, isDamaged: false, shelfId: 'A1' },
+      { id: 'det-02', productId: 'PRD-CHS-02', sku: 'SKU-CHS-102', name: 'Cheese', cameraCount: 15, x: 55, y: 35, w: 25, h: 30, exp: '15-Jul-2026', barcode: '890987654321', confidenceScore: 0.94, isDamaged: false, shelfId: 'A2' }
     ],
     hasAnomaly: true,
     anomalyType: 'Count Discrepancy (Cheese count DB:18 vs Vision:15)'
@@ -240,8 +246,8 @@ export let cameraData = {
     status: 'ACTIVE',
     lastScanTime: 'Just now',
     items: [
-      { name: 'Rice', cameraCount: 340, x: 15, y: 25, w: 30, h: 45, exp: '28-Dec-2026', barcode: '890345678123', isDamaged: false },
-      { name: 'Wheat', cameraCount: 10, x: 55, y: 30, w: 30, h: 40, exp: '10-Mar-2027', barcode: '890765432198', isDamaged: false }
+      { id: 'det-03', productId: 'PRD-RCE-03', sku: 'SKU-RCE-103', name: 'Rice', cameraCount: 340, x: 15, y: 25, w: 30, h: 45, exp: '28-Dec-2026', barcode: '890345678123', confidenceScore: 0.96, isDamaged: false, shelfId: 'B1' },
+      { id: 'det-04', productId: 'PRD-WHT-04', sku: 'SKU-WHT-104', name: 'Wheat', cameraCount: 10, x: 55, y: 30, w: 30, h: 40, exp: '10-Mar-2027', barcode: '890765432198', confidenceScore: 0.91, isDamaged: false, shelfId: 'B2' }
     ],
     hasAnomaly: true,
     anomalyType: 'Count Discrepancy (Wheat count DB:12 vs Vision:10)'
@@ -252,15 +258,41 @@ export let cameraData = {
     status: 'ACTIVE',
     lastScanTime: 'Just now',
     items: [
-      { name: 'Laptops', cameraCount: 18, x: 20, y: 20, w: 30, h: 35, exp: 'N/A', barcode: '890456123789', isDamaged: false },
-      { name: 'Phones', cameraCount: 45, x: 55, y: 25, w: 28, h: 32, exp: 'N/A', barcode: '890987123456', isDamaged: false }
+      { id: 'det-05', productId: 'PRD-LPT-05', sku: 'SKU-LPT-105', name: 'Laptops', cameraCount: 18, x: 20, y: 20, w: 30, h: 35, exp: 'N/A', barcode: '890456123789', confidenceScore: 0.99, isDamaged: false, shelfId: 'C1' },
+      { id: 'det-06', productId: 'PRD-PHN-06', sku: 'SKU-PHN-106', name: 'Phones', cameraCount: 45, x: 55, y: 25, w: 28, h: 32, exp: 'N/A', barcode: '890987123456', confidenceScore: 0.97, isDamaged: false, shelfId: 'C2' }
     ],
     hasAnomaly: false,
     anomalyType: ''
   }
 };
 
-// Computer Vision Discrepancies Log (Explicit State Lifecycle)
+// Persistent In-Memory Audit Detection Scan Log (Un-erasable Raw Scan Evidence)
+export let detectionHistory = [
+  {
+    detectionId: 'det-scan-001',
+    cameraId: 'cam-01',
+    timestamp: '10 mins ago',
+    detectedItems: [
+      { name: 'Milk', cameraCount: 98, barcode: '890123456789', confidenceScore: 0.98, isDamaged: false },
+      { name: 'Cheese', cameraCount: 15, barcode: '890987654321', confidenceScore: 0.94, isDamaged: false }
+    ],
+    confidenceScores: [0.98, 0.94],
+    discrepancyIds: ['disc-01']
+  },
+  {
+    detectionId: 'det-scan-002',
+    cameraId: 'cam-02',
+    timestamp: '15 mins ago',
+    detectedItems: [
+      { name: 'Rice', cameraCount: 340, barcode: '890345678123', confidenceScore: 0.96, isDamaged: false },
+      { name: 'Wheat', cameraCount: 10, barcode: '890765432198', confidenceScore: 0.91, isDamaged: false }
+    ],
+    confidenceScores: [0.96, 0.91],
+    discrepancyIds: ['disc-02']
+  }
+];
+
+// Computer Vision Discrepancies Log (Explicit Analytical Lifecycle)
 export let discrepancies = [
   {
     id: 'disc-01',
@@ -271,6 +303,7 @@ export let discrepancies = [
     camCount: 15,
     discrepancy: 3,
     confidenceScore: 0.94,
+    isDamaged: false,
     status: 'REVIEW_REQUIRED',
     detectedAt: '10 mins ago',
     resolvedAt: null
@@ -284,6 +317,7 @@ export let discrepancies = [
     camCount: 10,
     discrepancy: 2,
     confidenceScore: 0.91,
+    isDamaged: false,
     status: 'REVIEW_REQUIRED',
     detectedAt: '15 mins ago',
     resolvedAt: null
@@ -390,11 +424,32 @@ export const demandHistory = {
 };
 
 // ==========================================
-// DYNAMIC COMPUTATION HELPERS & STATE MUTATORS
+// DYNAMIC COMPUTATION & PRODUCT LOOKUP HELPERS
 // ==========================================
 
 /**
- * Dynamically computes occupancy percentage for a shelf
+ * Priority Product Identification Lookup:
+ * 1. Barcode -> 2. SKU -> 3. Product Name/ID
+ */
+export function findProductByBarcodeOrSkuOrName(identifier) {
+  if (!identifier) return null;
+  const str = String(identifier).trim().toLowerCase();
+
+  // 1. Priority Barcode Match
+  let match = products.find(p => p.barcode && p.barcode.toLowerCase() === str);
+  if (match) return match;
+
+  // 2. Priority SKU Match
+  match = products.find(p => p.sku && p.sku.toLowerCase() === str);
+  if (match) return match;
+
+  // 3. Fallback Product Name or Product ID Match
+  match = products.find(p => p.name.toLowerCase() === str || p.productId.toLowerCase() === str);
+  return match || null;
+}
+
+/**
+ * Computes shelf occupancy percentage
  */
 export function getShelfOccupancy(shelf) {
   if (!shelf || !shelf.capacity) return 0;
@@ -403,8 +458,6 @@ export function getShelfOccupancy(shelf) {
 
 /**
  * Dynamic Stockout Risk Score Helper
- * Dynamically calculates stockout risk score (0-100%) and risk level (LOW, MEDIUM, HIGH, CRITICAL)
- * from quantity, capacity, reorder level, demand level, and historical sales trends.
  */
 export function calculateStockoutRisk(shelf, product, history) {
   if (!shelf) return { score: 0, level: 'LOW' };
@@ -414,25 +467,21 @@ export function calculateStockoutRisk(shelf, product, history) {
   
   let riskScore = 0;
 
-  // Base fill rate impact
   if (fillRate === 0) riskScore += 95;
   else if (fillRate < 0.15) riskScore += 80;
   else if (fillRate < 0.3) riskScore += 50;
   else if (fillRate < 0.5) riskScore += 25;
 
-  // Reorder level threshold impact
   if (shelf.quantity <= reorderLevel) {
     riskScore += 20;
   }
 
-  // Demand velocity impact
   if (shelf.demand === 'increasing' || product?.demandLevel === 'increasing') {
     riskScore += 15;
   } else if (shelf.demand === 'peak' || product?.demandLevel === 'peak') {
     riskScore += 25;
   }
 
-  // Cap score 0-100
   riskScore = Math.min(100, Math.max(0, riskScore));
 
   let level = 'LOW';
@@ -448,7 +497,7 @@ export function calculateStockoutRisk(shelf, product, history) {
  */
 export function getEnrichedShelves() {
   return shelves.map(s => {
-    const product = products.find(p => p.productId === s.productId || p.name.toLowerCase() === s.item.toLowerCase());
+    const product = findProductByBarcodeOrSkuOrName(s.productId) || findProductByBarcodeOrSkuOrName(s.item);
     const history = demandHistory[s.item];
     const occupancy = getShelfOccupancy(s);
     const risk = calculateStockoutRisk(s, product, history);
@@ -464,6 +513,7 @@ export function getEnrichedShelves() {
       stockoutRiskScore: risk.score,
       stockoutRiskLevel: risk.level,
       productSku: product?.sku || 'N/A',
+      productBarcode: product?.barcode || 'N/A',
       reorderLevel: product?.reorderLevel || Math.round(s.capacity * 0.25)
     };
   });
@@ -477,14 +527,186 @@ export function getActiveDiscrepancies(includeResolved = false) {
   return discrepancies.filter(d => d.status === 'DETECTED' || d.status === 'REVIEW_REQUIRED');
 }
 
+// ==========================================
+// COMPUTER VISION PROCESSING PIPELINE
+// ==========================================
+
 /**
- * Sync Database Action: Reconciles CV camera counts into DB and marks discrepancies RESOLVED
+ * Process Vision Detections Pipeline:
+ * 1. Barcode/SKU product identification
+ * 2. Audit log entry appended to detectionHistory (raw scan evidence)
+ * 3. Count variance, confidence, and damage assessment
+ * 4. Discrepancy creation (REVIEW_REQUIRED) without overwriting inventory
  */
-export function syncDatabaseState(mismatches = []) {
+export function processVisionDetections(cameraId, detectionData = {}) {
+  if (!cameraData[cameraId]) {
+    cameraData[cameraId] = {
+      cameraId,
+      location: 'Warehouse Floor',
+      status: 'ACTIVE',
+      lastScanTime: 'Just now',
+      items: [],
+      hasAnomaly: false,
+      anomalyType: ''
+    };
+  }
+
+  const rawItems = detectionData.items || [];
+  const processedItems = [];
+  const generatedDiscrepancyIds = [];
+  let cameraHasAnomaly = !!detectionData.hasAnomaly;
+  let anomalyMessage = detectionData.anomalyType || '';
+
+  rawItems.forEach(item => {
+    // Priority Barcode -> SKU -> Name matching
+    const matchedProduct = findProductByBarcodeOrSkuOrName(item.barcode) ||
+                           findProductByBarcodeOrSkuOrName(item.sku) ||
+                           findProductByBarcodeOrSkuOrName(item.name);
+
+    const productName = matchedProduct ? matchedProduct.name : (item.name || 'Unknown Cargo');
+    const productId = matchedProduct ? matchedProduct.productId : 'PRD-GENERIC';
+    const sku = matchedProduct ? matchedProduct.sku : 'SKU-GENERIC';
+    const barcode = item.barcode || (matchedProduct ? matchedProduct.barcode : 'N/A');
+    const confidenceScore = item.confidenceScore !== undefined ? item.confidenceScore : 0.94;
+    const isDamaged = !!item.isDamaged;
+    const camCount = item.cameraCount !== undefined ? item.cameraCount : 0;
+
+    // Find associated shelf
+    let targetShelf = shelves.find(s => s.item.toLowerCase() === productName.toLowerCase() || s.productId === productId);
+    if (!targetShelf && item.shelfId) {
+      targetShelf = shelves.find(s => s.id === item.shelfId || s.shelfId === item.shelfId);
+    }
+
+    const processedItem = {
+      id: item.id || `det-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      productId,
+      sku,
+      name: productName,
+      cameraCount: camCount,
+      x: item.x || 20,
+      y: item.y || 30,
+      w: item.w || 25,
+      h: item.h || 40,
+      exp: item.exp || (matchedProduct ? matchedProduct.expiryDate : 'N/A'),
+      barcode,
+      confidenceScore,
+      isDamaged,
+      cameraId,
+      shelfId: targetShelf ? targetShelf.id : 'A1'
+    };
+
+    processedItems.push(processedItem);
+
+    if (targetShelf) {
+      const dbCount = targetShelf.quantity;
+      const discrepancyAmt = dbCount - camCount;
+      const isMismatch = discrepancyAmt !== 0;
+      const isLowConfidence = confidenceScore < 0.70;
+
+      if (isMismatch || isDamaged || isLowConfidence) {
+        cameraHasAnomaly = true;
+        if (isMismatch) {
+          anomalyMessage = `Inventory Mismatch (${productName}: DB ${dbCount} vs Vision ${camCount})`;
+        } else if (isDamaged) {
+          anomalyMessage = `Damaged packaging detected on ${productName}`;
+        } else if (isLowConfidence) {
+          anomalyMessage = `Low confidence CV detection (${Math.round(confidenceScore * 100)}%) on ${productName}`;
+        }
+
+        // Upsert Discrepancy Record (Status: REVIEW_REQUIRED)
+        const existingIndex = discrepancies.findIndex(d => d.shelfId === targetShelf.id && d.status !== 'RESOLVED');
+        const discId = existingIndex !== -1 ? discrepancies[existingIndex].id : `disc-${Date.now()}-${Math.random().toString(36).substr(2, 3)}`;
+
+        const newDiscrepancy = {
+          id: discId,
+          shelfId: targetShelf.id,
+          productId,
+          productName,
+          dbCount,
+          camCount,
+          discrepancy: Math.abs(discrepancyAmt),
+          confidenceScore,
+          isDamaged,
+          status: 'REVIEW_REQUIRED',
+          detectedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          resolvedAt: null
+        };
+
+        if (existingIndex !== -1) {
+          discrepancies[existingIndex] = newDiscrepancy;
+        } else {
+          discrepancies.push(newDiscrepancy);
+        }
+
+        generatedDiscrepancyIds.push(discId);
+      }
+    }
+  });
+
+  // Append Un-erasable Raw Scan Record to detectionHistory Audit Log
+  const scanAuditRecord = {
+    detectionId: `scan-${Date.now()}`,
+    cameraId,
+    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    detectedItems: processedItems.map(i => ({
+      name: i.name,
+      sku: i.sku,
+      barcode: i.barcode,
+      cameraCount: i.cameraCount,
+      confidenceScore: i.confidenceScore,
+      isDamaged: i.isDamaged
+    })),
+    confidenceScores: processedItems.map(i => i.confidenceScore),
+    discrepancyIds: generatedDiscrepancyIds
+  };
+  detectionHistory.push(scanAuditRecord);
+
+  // Update Camera Telemetry State
+  cameraData[cameraId] = {
+    ...cameraData[cameraId],
+    lastScanTime: 'Just now',
+    items: processedItems,
+    hasAnomaly: cameraHasAnomaly,
+    anomalyType: anomalyMessage
+  };
+
+  return {
+    cameraData,
+    discrepancies: getActiveDiscrepancies(),
+    shelves: getEnrichedShelves(),
+    detectionHistory
+  };
+}
+
+/**
+ * Database Sync Action: Reconciles CV camera counts into DB and marks discrepancies RESOLVED.
+ * Preserves raw scan evidence and detectionHistory intact.
+ */
+export function syncDatabaseState(mismatches = [], discrepancyIds = []) {
+  // Find authoritative active (unresolved) discrepancies
+  let activeDiscs = discrepancies.filter(d => d.status !== 'RESOLVED');
+  let targetDiscs = [];
+
+  if (discrepancyIds.length > 0) {
+    // 1. Prefer explicit discrepancy ID lookup
+    targetDiscs = activeDiscs.filter(d => discrepancyIds.includes(d.id));
+  }
+  
+  if (targetDiscs.length === 0 && mismatches.length > 0) {
+    // 2. Backward compatibility: validate mismatches against authoritative discrepancy records
+    mismatches.forEach(m => {
+      const match = activeDiscs.find(d => d.shelfId === m.shelfId || d.shelfId === m.id);
+      if (match) {
+        targetDiscs.push(match);
+      }
+    });
+  }
+
+  // Update shelves quantity using validated discrepancy camCount
   shelves = shelves.map(shelf => {
-    const match = mismatches.find(m => m.shelfId === shelf.id || m.shelfId === shelf.shelfId);
-    if (match) {
-      const newQty = match.camCount;
+    const matchDisc = targetDiscs.find(d => d.shelfId === shelf.id || d.shelfId === shelf.shelfId);
+    if (matchDisc) {
+      const newQty = matchDisc.camCount;
       let status = 'normal';
       if (newQty === 0) status = 'empty';
       else if (newQty / shelf.capacity < 0.2) status = 'low';
@@ -493,33 +715,48 @@ export function syncDatabaseState(mismatches = []) {
     return shelf;
   });
 
-  // Mark active discrepancies resolved
+  // Mark targeted discrepancies as RESOLVED with timestamp
+  const resolvedShelfIds = new Set();
   discrepancies = discrepancies.map(d => {
-    const match = mismatches.find(m => m.shelfId === d.shelfId);
-    if (match) {
-      return { ...d, dbCount: d.camCount, status: 'RESOLVED', resolvedAt: new Date().toLocaleTimeString() };
+    const isTargeted = targetDiscs.some(td => td.id === d.id);
+    if (isTargeted && d.status !== 'RESOLVED') {
+      resolvedShelfIds.add(d.shelfId);
+      return {
+        ...d,
+        dbCount: d.camCount,
+        status: 'RESOLVED',
+        resolvedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
     }
     return d;
   });
 
-  // Clear camera anomaly flags
+  // Selective Camera Anomaly Clearance: Clear anomaly ONLY for cameras whose items no longer have unresolved discrepancies
+  const remainingActiveDiscs = discrepancies.filter(d => d.status !== 'RESOLVED');
   Object.keys(cameraData).forEach(camId => {
-    cameraData[camId] = {
-      ...cameraData[camId],
-      hasAnomaly: false,
-      anomalyType: ''
-    };
+    const camItems = cameraData[camId].items || [];
+    const hasRemainingDiscrepancy = remainingActiveDiscs.some(d =>
+      camItems.some(item => item.shelfId === d.shelfId || item.name === d.productName)
+    );
+    if (!hasRemainingDiscrepancy) {
+      cameraData[camId] = {
+        ...cameraData[camId],
+        hasAnomaly: false,
+        anomalyType: ''
+      };
+    }
   });
 
   return {
     shelves: getEnrichedShelves(),
     discrepancies: getActiveDiscrepancies(),
-    cameraData
+    cameraData,
+    detectionHistory
   };
 }
 
 /**
- * Restock All Action: Replenishes low-stock shelves to 90%
+ * Restock All Action
  */
 export function restockAllShelvesState() {
   shelves = shelves.map(shelf => {
@@ -532,7 +769,6 @@ export function restockAllShelvesState() {
     return shelf;
   });
 
-  // Sync camera data to match restocked state
   if (cameraData['cam-01']) {
     cameraData['cam-01'] = {
       ...cameraData['cam-01'],
@@ -559,7 +795,7 @@ export function restockAllShelvesState() {
 }
 
 /**
- * Trigger Promotion Action: Relocates expiring item from A1 to D1
+ * Trigger Promotion Action
  */
 export function triggerPromotionState(fromShelfId = 'A1', targetShelfId = 'D1') {
   const fromShelf = shelves.find(s => s.id === fromShelfId || s.shelfId === fromShelfId);

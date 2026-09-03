@@ -34,6 +34,7 @@ export default function App() {
   const [alerts, setAlerts] = useState([]);
   const [agvs, setAgvs] = useState([]);
   const [demandHistory, setDemandHistory] = useState({});
+  const [detectionHistory, setDetectionHistory] = useState([]);
 
   // Selected telemetry shelf
   const [selectedShelfId, setSelectedShelfId] = useState('A1');
@@ -53,7 +54,8 @@ export default function App() {
           discRes,
           alertsRes,
           agvsRes,
-          demandRes
+          demandRes,
+          historyRes
         ] = await Promise.all([
           api.getWarehouseInfo(),
           api.getProducts(),
@@ -62,7 +64,8 @@ export default function App() {
           api.getDiscrepancies(),
           api.getAlerts(),
           api.getAgvs(),
-          api.getDemandHistory()
+          api.getDemandHistory(),
+          api.getDetectionHistory()
         ]);
 
         setWarehouseInfo(whRes);
@@ -73,6 +76,7 @@ export default function App() {
         setAlerts(alertsRes);
         setAgvs(agvsRes);
         setDemandHistory(demandRes);
+        setDetectionHistory(historyRes);
       } catch (err) {
         console.error('Failed to load initial centralized warehouse state from REST backend:', err);
       }
@@ -87,17 +91,25 @@ export default function App() {
     setSelectedShelfId(shelfId);
   };
 
+  // Callback when VisionEngine triggers a detection simulation
+  const handleVisionDetection = (result) => {
+    if (result.cameraData) setCameraData(result.cameraData);
+    if (result.discrepancies) setDiscrepancies(result.discrepancies);
+    if (result.shelves) setShelves(result.shelves);
+    if (result.detectionHistory) setDetectionHistory(result.detectionHistory);
+  };
+
   // Sync DB to match Camera observations
-  const handleSyncDatabase = async (mismatches) => {
+  const handleSyncDatabase = async (mismatches, discrepancyIds) => {
     try {
-      const res = await api.syncDatabase(mismatches);
+      const res = await api.syncDatabase(mismatches, discrepancyIds);
       setShelves(res.shelves);
       setCameraData(res.cameraData);
       if (res.discrepancies) {
         setDiscrepancies(res.discrepancies);
-      } else {
-        const updatedDisc = await api.getDiscrepancies();
-        setDiscrepancies(updatedDisc);
+      }
+      if (res.detectionHistory) {
+        setDetectionHistory(res.detectionHistory);
       }
     } catch (err) {
       console.error('Failed to sync database:', err);
@@ -349,8 +361,8 @@ export default function App() {
                 <VisionEngine 
                   cameraData={cameraData} 
                   setCameraData={setCameraData} 
-                  discrepancies={discrepancies}
-                  onAddSafetyAlert={handleAddSafetyAlert} 
+                  onAddSafetyAlert={handleAddSafetyAlert}
+                  onVisionDetection={handleVisionDetection}
                 />
               </div>
               <div className="lg:col-span-2 h-full">

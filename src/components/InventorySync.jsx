@@ -2,87 +2,44 @@ import React from 'react';
 import { RefreshCw, CheckCircle, AlertTriangle, Database, Camera } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
-export default function InventorySync({ shelves, cameraData, onSyncDatabase }) {
-  // Find discrepancies
+export default function InventorySync({ shelves = [], cameraData = {}, discrepancies = [], onSyncDatabase }) {
+  // Compute active mismatches comparing database shelf stock against live camera counts
   const mismatches = [];
+  const discrepancyIdsToResolve = [];
 
-  // Check camera 1 (Dairy): Aisle A
-  const cam1Milk = cameraData['cam-01']?.items?.find(i => i.name === 'Milk')?.cameraCount;
-  const dbMilk = shelves.find(s => s.id === 'A1')?.quantity;
-  if (cam1Milk !== undefined && dbMilk !== undefined && cam1Milk !== dbMilk) {
-    mismatches.push({
-      shelfId: 'A1',
-      itemName: 'Milk',
-      dbCount: dbMilk,
-      camCount: cam1Milk,
-      diff: cam1Milk - dbMilk,
-    });
-  }
+  shelves.forEach((shelf) => {
+    if (shelf.id === 'D1' && shelf.quantity === 0) return;
 
-  const cam1Cheese = cameraData['cam-01']?.items?.find(i => i.name === 'Cheese')?.cameraCount;
-  const dbCheese = shelves.find(s => s.id === 'A2')?.quantity;
-  if (cam1Cheese !== undefined && dbCheese !== undefined && cam1Cheese !== dbCheese) {
-    mismatches.push({
-      shelfId: 'A2',
-      itemName: 'Cheese',
-      dbCount: dbCheese,
-      camCount: cam1Cheese,
-      diff: cam1Cheese - dbCheese,
+    let cameraVal = shelf.quantity;
+    Object.values(cameraData).forEach(cam => {
+      cam?.items?.forEach(i => {
+        if (i.name?.toLowerCase() === shelf.item?.toLowerCase() || i.shelfId === shelf.id) {
+          cameraVal = i.cameraCount;
+        }
+      });
     });
-  }
 
-  // Check camera 2 (Grains): Aisle B
-  const cam2Rice = cameraData['cam-02']?.items?.find(i => i.name === 'Rice')?.cameraCount;
-  const dbRice = shelves.find(s => s.id === 'B1')?.quantity;
-  if (cam2Rice !== undefined && dbRice !== undefined && cam2Rice !== dbRice) {
-    mismatches.push({
-      shelfId: 'B1',
-      itemName: 'Rice',
-      dbCount: dbRice,
-      camCount: cam2Rice,
-      diff: cam2Rice - dbRice,
-    });
-  }
+    const diff = cameraVal - shelf.quantity;
+    if (diff !== 0) {
+      mismatches.push({
+        shelfId: shelf.id,
+        itemName: shelf.item,
+        dbCount: shelf.quantity,
+        camCount: cameraVal,
+        diff
+      });
+    }
+  });
 
-  const cam2Wheat = cameraData['cam-02']?.items?.find(i => i.name === 'Wheat')?.cameraCount;
-  const dbWheat = shelves.find(s => s.id === 'B2')?.quantity;
-  if (cam2Wheat !== undefined && dbWheat !== undefined && cam2Wheat !== dbWheat) {
-    mismatches.push({
-      shelfId: 'B2',
-      itemName: 'Wheat',
-      dbCount: dbWheat,
-      camCount: cam2Wheat,
-      diff: cam2Wheat - dbWheat,
-    });
-  }
-
-  // Check camera 3 (Electronics): Aisle C
-  const cam3Laptops = cameraData['cam-03']?.items?.find(i => i.name === 'Laptops')?.cameraCount;
-  const dbLaptops = shelves.find(s => s.id === 'C1')?.quantity;
-  if (cam3Laptops !== undefined && dbLaptops !== undefined && cam3Laptops !== dbLaptops) {
-    mismatches.push({
-      shelfId: 'C1',
-      itemName: 'Laptops',
-      dbCount: dbLaptops,
-      camCount: cam3Laptops,
-      diff: cam3Laptops - dbLaptops,
-    });
-  }
-
-  const cam3Phones = cameraData['cam-03']?.items?.find(i => i.name === 'Phones')?.cameraCount;
-  const dbPhones = shelves.find(s => s.id === 'C2')?.quantity;
-  if (cam3Phones !== undefined && dbPhones !== undefined && cam3Phones !== dbPhones) {
-    mismatches.push({
-      shelfId: 'C2',
-      itemName: 'Phones',
-      dbCount: dbPhones,
-      camCount: cam3Phones,
-      diff: cam3Phones - dbPhones,
-    });
-  }
+  // Collect active REVIEW_REQUIRED discrepancy IDs
+  discrepancies.forEach(d => {
+    if (d.status !== 'RESOLVED') {
+      discrepancyIdsToResolve.push(d.id);
+    }
+  });
 
   const handleSync = () => {
-    if (mismatches.length === 0) return;
+    if (mismatches.length === 0 && discrepancyIdsToResolve.length === 0) return;
 
     // Trigger visual confetti celebration
     confetti({
@@ -92,8 +49,12 @@ export default function InventorySync({ shelves, cameraData, onSyncDatabase }) {
       colors: ['#2a3723', '#b9bba8', '#e8e5dd']
     });
 
-    onSyncDatabase(mismatches);
+    if (onSyncDatabase) {
+      onSyncDatabase(mismatches, discrepancyIdsToResolve);
+    }
   };
+
+  const hasActiveMismatches = mismatches.length > 0 || discrepancyIdsToResolve.length > 0;
 
   return (
     <div className="glass-panel p-6 rounded-2xl flex flex-col h-full">
@@ -109,11 +70,16 @@ export default function InventorySync({ shelves, cameraData, onSyncDatabase }) {
       </div>
 
       {/* Discrepancy Status Banner */}
-      {mismatches.length > 0 ? (
+      {hasActiveMismatches ? (
         <div className="bg-amber-50/95 border border-amber-300 text-amber-800 text-xs px-4 py-3 rounded-xl flex items-start gap-3 mb-5 shadow-sm">
           <AlertTriangle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
           <div>
-            <div className="font-bold text-sm">Inventory Mismatches Detected!</div>
+            <div className="font-bold text-sm flex items-center gap-2">
+              Inventory Mismatches Detected!
+              <span className="bg-amber-200 text-amber-900 text-[10px] px-2 py-0.5 rounded font-mono font-bold">
+                REVIEW_REQUIRED
+              </span>
+            </div>
             <p className="text-gray-700 mt-1 font-medium">
               Computer vision camera feeds report stock counts that do not match current database records.
             </p>
@@ -144,16 +110,19 @@ export default function InventorySync({ shelves, cameraData, onSyncDatabase }) {
           </thead>
           <tbody className="divide-y divide-[#b9bba8]/30 text-[#2a3723]">
             {shelves.map((shelf) => {
-              // Find matching camera info
+              if (shelf.id === 'D1' && shelf.quantity === 0) return null;
+
               let cameraVal = shelf.quantity;
-              cameraData['cam-01']?.items?.forEach(i => { if (i.name === shelf.item) cameraVal = i.cameraCount; });
-              cameraData['cam-02']?.items?.forEach(i => { if (i.name === shelf.item) cameraVal = i.cameraCount; });
-              cameraData['cam-03']?.items?.forEach(i => { if (i.name === shelf.item) cameraVal = i.cameraCount; });
+              Object.values(cameraData).forEach(cam => {
+                cam?.items?.forEach(i => {
+                  if (i.name?.toLowerCase() === shelf.item?.toLowerCase() || i.shelfId === shelf.id) {
+                    cameraVal = i.cameraCount;
+                  }
+                });
+              });
 
               const variance = cameraVal - shelf.quantity;
               const hasDiff = variance !== 0;
-
-              if (shelf.id === 'D1') return null; // Skip promo rack if empty
 
               return (
                 <tr key={shelf.id} className={`hover:bg-[#2a3723]/5 ${hasDiff ? 'bg-amber-500/5' : ''}`}>
@@ -184,15 +153,15 @@ export default function InventorySync({ shelves, cameraData, onSyncDatabase }) {
       {/* Sync Button */}
       <button
         onClick={handleSync}
-        disabled={mismatches.length === 0}
+        disabled={!hasActiveMismatches}
         className={`w-full py-3.5 rounded-xl font-black flex items-center justify-center gap-2 border transition-all duration-300 cursor-pointer ${
-          mismatches.length > 0
+          hasActiveMismatches
             ? 'bg-[#2a3723] border-[#2a3723] hover:bg-[#2a3723]/90 text-white shadow-md active:scale-[0.98]'
             : 'bg-[#dcd9cf]/40 border-[#b9bba8]/30 text-[#2a3723]/40 cursor-not-allowed'
         }`}
       >
-        <RefreshCw className={`w-4 h-4 ${mismatches.length > 0 ? 'animate-spin' : ''}`} style={{ animationDuration: '4s' }} />
-        <span>Reconcile & Sync Database ({mismatches.length} Actions)</span>
+        <RefreshCw className={`w-4 h-4 ${hasActiveMismatches ? 'animate-spin' : ''}`} style={{ animationDuration: '4s' }} />
+        <span>Reconcile & Sync Database ({mismatches.length || discrepancyIdsToResolve.length} Actions)</span>
       </button>
     </div>
   );

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Camera, Eye, ShieldAlert, Tag, PackageOpen, RotateCcw } from 'lucide-react';
+import { api } from '../services/api';
 
-export default function VisionEngine({ cameraData, setCameraData, onAddSafetyAlert }) {
+export default function VisionEngine({ cameraData, setCameraData, onAddSafetyAlert, onVisionDetection }) {
   const [selectedCam, setSelectedCam] = useState('cam-01');
   const [showBoundingBoxes, setShowBoundingBoxes] = useState(true);
   const [showOcr, setShowOcr] = useState(true);
@@ -25,91 +26,103 @@ export default function VisionEngine({ cameraData, setCameraData, onAddSafetyAle
 
   const currentCamData = cameraData[selectedCam] || {};
 
-  const handleSimulateMismatch = () => {
-    // Modify camera view counts to be different from database
-    setCameraData(prev => {
-      const updated = { ...prev };
+  const handleSimulateMismatch = async () => {
+    try {
+      let items = [];
       if (selectedCam === 'cam-01') {
-        updated['cam-01'] = {
-          ...updated['cam-01'],
-          items: updated['cam-01'].items.map(item =>
-            item.name === 'Milk' ? { ...item, cameraCount: 95 } : item // DB has 98
-          ),
-          hasAnomaly: true,
-          anomalyType: 'Inventory Mismatch (Milk: 3 units missing)'
-        };
+        items = [
+          { name: 'Milk', sku: 'SKU-MLK-101', barcode: '890123456789', cameraCount: 95, x: 20, y: 30, w: 25, h: 40, exp: '05-Jul-2026', confidenceScore: 0.94, isDamaged: false, shelfId: 'A1' },
+          { name: 'Cheese', sku: 'SKU-CHS-102', barcode: '890987654321', cameraCount: 15, x: 55, y: 35, w: 25, h: 30, exp: '15-Jul-2026', confidenceScore: 0.92, isDamaged: false, shelfId: 'A2' }
+        ];
       } else if (selectedCam === 'cam-02') {
-        updated['cam-02'] = {
-          ...updated['cam-02'],
-          items: updated['cam-02'].items.map(item =>
-            item.name === 'Wheat' ? { ...item, cameraCount: 16 } : item // DB has 12 (extra items!)
-          ),
-          hasAnomaly: true,
-          anomalyType: 'Inventory Mismatch (Wheat: 4 extra units detected)'
-        };
+        items = [
+          { name: 'Rice', sku: 'SKU-RCE-103', barcode: '890345678123', cameraCount: 340, x: 15, y: 25, w: 30, h: 45, exp: '28-Dec-2026', confidenceScore: 0.96, isDamaged: false, shelfId: 'B1' },
+          { name: 'Wheat', sku: 'SKU-WHT-104', barcode: '890765432198', cameraCount: 16, x: 55, y: 30, w: 30, h: 40, exp: '10-Mar-2027', confidenceScore: 0.91, isDamaged: false, shelfId: 'B2' }
+        ];
+      } else {
+        items = currentCamData.items || [];
       }
-      return updated;
-    });
+
+      const res = await api.sendVisionDetections(selectedCam, {
+        items,
+        hasAnomaly: true,
+        anomalyType: `Inventory Mismatch (${items[0]?.name || 'Product'} count variance detected)`
+      });
+
+      setCameraData(res.cameraData);
+      if (onVisionDetection) {
+        onVisionDetection(res);
+      }
+    } catch (err) {
+      console.error('Failed to trigger vision mismatch:', err);
+    }
   };
 
-  const handleSimulateDamage = () => {
-    setCameraData(prev => {
-      const updated = { ...prev };
-      updated[selectedCam] = {
-        ...updated[selectedCam],
-        items: updated[selectedCam].items.map((item, idx) =>
-          idx === 0 ? { ...item, isDamaged: true } : item
-        ),
+  const handleSimulateDamage = async () => {
+    try {
+      const currentItems = currentCamData.items || [];
+      const updatedItems = currentItems.map((item, idx) =>
+        idx === 0 ? { ...item, isDamaged: true, confidenceScore: 0.88 } : item
+      );
+
+      const res = await api.sendVisionDetections(selectedCam, {
+        items: updatedItems,
         hasAnomaly: true,
-        anomalyType: `Damaged packaging detected on ${updated[selectedCam].items[0]?.name || 'cargo'}`
-      };
-      return updated;
-    });
+        anomalyType: `Damaged packaging detected on ${updatedItems[0]?.name || 'cargo'}`
+      });
+
+      setCameraData(res.cameraData);
+      if (onVisionDetection) {
+        onVisionDetection(res);
+      }
+    } catch (err) {
+      console.error('Failed to trigger vision damage detection:', err);
+    }
   };
 
   const handleSimulateSafety = () => {
     const alerts = [
-      { text: 'Operator missing safety helmet in Aisle A', severity: 'high', zone: 'Zone A' },
-      { text: 'Fallen boxes blocking emergency exit in Aisle B', severity: 'critical', zone: 'Zone B' },
-      { text: 'Forklift speed violation (8 km/h) in Zone C', severity: 'medium', zone: 'Zone C' }
+      { text: 'Operator missing safety helmet in Aisle A', severity: 'high', zone: 'Aisle A' },
+      { text: 'Fallen boxes blocking emergency exit in Aisle B', severity: 'critical', zone: 'Aisle B' },
+      { text: 'Forklift speed violation (8 km/h) in Zone C', severity: 'medium', zone: 'Aisle C' }
     ];
     const randomAlert = alerts[Math.floor(Math.random() * alerts.length)];
     onAddSafetyAlert(randomAlert);
   };
 
-  const handleResetCamera = () => {
-    setCameraData(prev => {
-      const updated = { ...prev };
+  const handleResetCamera = async () => {
+    try {
+      let baselineItems = [];
       if (selectedCam === 'cam-01') {
-        updated['cam-01'] = {
-          items: [
-            { name: 'Milk', cameraCount: 98, x: 20, y: 30, w: 25, h: 40, exp: '05-Jul-2026', barcode: '890123456789', isDamaged: false },
-            { name: 'Cheese', cameraCount: 18, x: 55, y: 35, w: 25, h: 30, exp: '15-Jul-2026', barcode: '890987654321', isDamaged: false }
-          ],
-          hasAnomaly: false,
-          anomalyType: ''
-        };
+        baselineItems = [
+          { name: 'Milk', sku: 'SKU-MLK-101', barcode: '890123456789', cameraCount: 98, x: 20, y: 30, w: 25, h: 40, exp: '05-Jul-2026', confidenceScore: 0.98, isDamaged: false, shelfId: 'A1' },
+          { name: 'Cheese', sku: 'SKU-CHS-102', barcode: '890987654321', cameraCount: 18, x: 55, y: 35, w: 25, h: 30, exp: '15-Jul-2026', confidenceScore: 0.94, isDamaged: false, shelfId: 'A2' }
+        ];
       } else if (selectedCam === 'cam-02') {
-        updated['cam-02'] = {
-          items: [
-            { name: 'Rice', cameraCount: 340, x: 15, y: 25, w: 30, h: 45, exp: '28-Dec-2026', barcode: '890345678123', isDamaged: false },
-            { name: 'Wheat', cameraCount: 12, x: 55, y: 30, w: 30, h: 40, exp: '10-Mar-2027', barcode: '890765432198', isDamaged: false }
-          ],
-          hasAnomaly: false,
-          anomalyType: ''
-        };
+        baselineItems = [
+          { name: 'Rice', sku: 'SKU-RCE-103', barcode: '890345678123', cameraCount: 340, x: 15, y: 25, w: 30, h: 45, exp: '28-Dec-2026', confidenceScore: 0.96, isDamaged: false, shelfId: 'B1' },
+          { name: 'Wheat', sku: 'SKU-WHT-104', barcode: '890765432198', cameraCount: 12, x: 55, y: 30, w: 30, h: 40, exp: '10-Mar-2027', confidenceScore: 0.91, isDamaged: false, shelfId: 'B2' }
+        ];
       } else if (selectedCam === 'cam-03') {
-        updated['cam-03'] = {
-          items: [
-            { name: 'Laptops', cameraCount: 18, x: 20, y: 20, w: 30, h: 35, exp: 'N/A', barcode: '890456123789', isDamaged: false },
-            { name: 'Phones', cameraCount: 45, x: 55, y: 25, w: 28, h: 32, exp: 'N/A', barcode: '890987123456', isDamaged: false }
-          ],
-          hasAnomaly: false,
-          anomalyType: ''
-        };
+        baselineItems = [
+          { name: 'Laptops', sku: 'SKU-LPT-105', barcode: '890456123789', cameraCount: 18, x: 20, y: 20, w: 30, h: 35, exp: 'N/A', confidenceScore: 0.99, isDamaged: false, shelfId: 'C1' },
+          { name: 'Phones', sku: 'SKU-PHN-106', barcode: '890987123456', cameraCount: 45, x: 55, y: 25, w: 28, h: 32, exp: 'N/A', confidenceScore: 0.97, isDamaged: false, shelfId: 'C2' }
+        ];
       }
-      return updated;
-    });
+
+      const res = await api.sendVisionDetections(selectedCam, {
+        items: baselineItems,
+        hasAnomaly: false,
+        anomalyType: ''
+      });
+
+      setCameraData(res.cameraData);
+      if (onVisionDetection) {
+        onVisionDetection(res);
+      }
+    } catch (err) {
+      console.error('Failed to reset camera telemetry:', err);
+    }
   };
 
   return (
@@ -121,7 +134,7 @@ export default function VisionEngine({ cameraData, setCameraData, onAddSafetyAle
             <Camera className="w-5 h-5 text-[#2a3723]" />
             <h3 className="text-xl font-bold text-[#2a3723]">Smart Vision Engine</h3>
           </div>
-          <p className="text-xs text-[#2a3723]/70 mt-0.5 font-medium">Real-time object detection & labels via YOLOv11 & PaddleOCR</p>
+          <p className="text-xs text-[#2a3723]/70 mt-0.5 font-medium font-sans">Real-time object detection & labels via YOLOv11 & PaddleOCR</p>
         </div>
         <span className="flex items-center gap-1.5 bg-green-600/10 text-green-700 text-xs px-2.5 py-1 rounded-full border border-green-600/20 font-mono font-bold">
           <span className="w-2 h-2 rounded-full bg-green-650 animate-ping"></span>
@@ -199,6 +212,7 @@ export default function VisionEngine({ cameraData, setCameraData, onAddSafetyAle
               {/* Items in Camera View */}
               {currentCamData.items?.map((item, index) => {
                 const boxColor = item.isDamaged ? '#f43f5e' : '#3b82f6';
+                const confidencePct = item.confidenceScore ? Math.round(item.confidenceScore * 100) : 94;
 
                 return (
                   <g key={index}>
@@ -252,7 +266,7 @@ export default function VisionEngine({ cameraData, setCameraData, onAddSafetyAle
                           fontWeight="bold"
                           fontFamily="monospace"
                         >
-                          {item.isDamaged ? `DAMAGED! (${item.name})` : `YOLOv11: ${item.name} (${item.cameraCount})`}
+                          {item.isDamaged ? `DAMAGED! (${item.name})` : `YOLOv11: ${item.name} (${item.cameraCount}) - ${confidencePct}%`}
                         </text>
                       </g>
                     )}
@@ -299,7 +313,7 @@ export default function VisionEngine({ cameraData, setCameraData, onAddSafetyAle
                           fontSize="2.2"
                           fontFamily="monospace"
                         >
-                          |||| {item.barcode.substring(0, 6)}
+                          |||| {item.barcode ? item.barcode.substring(0, 6) : '890123'}
                         </text>
                       </g>
                     )}

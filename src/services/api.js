@@ -38,11 +38,11 @@ export const api = {
     return res.json();
   },
 
-  async syncDatabase(mismatches) {
+  async syncDatabase(mismatches = [], discrepancyIds = []) {
     const res = await fetch(`${API_BASE}/shelves/sync-db`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mismatches })
+      body: JSON.stringify({ mismatches, discrepancyIds })
     });
     if (!res.ok) throw new Error('Failed to sync database');
     return res.json();
@@ -67,7 +67,7 @@ export const api = {
     return res.json();
   },
 
-  // Cameras
+  // Computer Vision Processing Pipeline
   async getCameras() {
     const res = await fetch(`${API_BASE}/cameras`);
     if (!res.ok) throw new Error('Failed to fetch camera streams');
@@ -81,6 +81,22 @@ export const api = {
       body: JSON.stringify(cameraState)
     });
     if (!res.ok) throw new Error('Failed to update camera stream');
+    return res.json();
+  },
+
+  async sendVisionDetections(cameraId, detectionPayload) {
+    const res = await fetch(`${API_BASE}/vision/detections`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cameraId, ...detectionPayload })
+    });
+    if (!res.ok) throw new Error('Failed to process vision detections');
+    return res.json();
+  },
+
+  async getDetectionHistory() {
+    const res = await fetch(`${API_BASE}/vision/history`);
+    if (!res.ok) throw new Error('Failed to fetch detection scan history');
     return res.json();
   },
 
