@@ -1,14 +1,42 @@
-import React from 'react';
-import { Hourglass, AlertCircle, Sparkles, ShoppingBag, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Hourglass, Sparkles, ShoppingBag, ArrowRight } from 'lucide-react';
+import { api } from '../services/api';
 
-export default function ExpiryIntel({ shelves, onTriggerPromotion }) {
-  
-  // Find perishable items (e.g. expiryDays < 999)
-  const perishables = shelves.filter(s => s.expiryDays && s.expiryDays < 999 && s.quantity > 0);
+export default function ExpiryIntel({ shelves = [], onTriggerPromotion }) {
+  const [expiryItems, setExpiryItems] = useState([]);
 
-  const handleApplyPromo = (shelf) => {
-    // Moves the items to D1 (Promo Rack) and changes price/discount
-    onTriggerPromotion(shelf.id, 'D1');
+  // Fetch backend-calculated FEFO expiry intelligence from REST API
+  useEffect(() => {
+    const fetchExpiryData = async () => {
+      try {
+        const data = await api.getExpiryIntelligence();
+        if (data && data.items) {
+          setExpiryItems(data.items);
+        }
+      } catch (err) {
+        console.error('Failed to fetch expiry intelligence from REST API:', err);
+      }
+    };
+    fetchExpiryData();
+  }, [shelves]);
+
+  // Filter perishable items (expiryDays < 999 and quantity > 0)
+  const perishables = expiryItems.length > 0
+    ? expiryItems.filter(item => item.daysUntilExpiry !== null && item.daysUntilExpiry < 999 && item.currentStock > 0)
+    : shelves.filter(s => s.expiryDays && s.expiryDays < 999 && s.quantity > 0).map(s => ({
+        shelfId: s.id,
+        productName: s.item,
+        currentStock: s.quantity,
+        daysUntilExpiry: s.expiryDays,
+        fefoPriority: s.expiryDays <= 5 ? 1 : 2,
+        expiryStatus: s.expiryDays <= 5 ? 'CRITICAL' : 'MEDIUM',
+        dispatchRecommendation: s.expiryDays <= 5 ? 'DISPATCH_NOW' : 'DISPATCH_NEXT'
+      }));
+
+  const handleApplyPromo = (shelfId) => {
+    if (onTriggerPromotion) {
+      onTriggerPromotion(shelfId, 'D1');
+    }
   };
 
   return (
@@ -20,19 +48,19 @@ export default function ExpiryIntel({ shelves, onTriggerPromotion }) {
             <Hourglass className="w-5 h-5 text-[#2a3723]" />
             <h3 className="text-xl font-bold text-[#2a3723] font-sans">Product Expiry Intelligence</h3>
           </div>
-          <p className="text-xs text-[#2a3723]/70 mt-0.5 font-medium">Automated tracking of batch code dates and waste reduction recommendations</p>
+          <p className="text-xs text-[#2a3723]/70 mt-0.5 font-medium">FEFO (First-Expired, First-Out) dispatch priority & exposure waste reduction</p>
         </div>
       </div>
 
       {/* Grid of perishables */}
       <div className="flex-1 overflow-y-auto space-y-4 max-h-[300px] pr-1">
-        {perishables.map((shelf) => {
-          const isCritical = shelf.expiryDays <= 5;
-          const isPromoItem = shelf.id === 'D1';
+        {perishables.map((item) => {
+          const isCritical = item.expiryStatus === 'CRITICAL' || item.daysUntilExpiry <= 5;
+          const isPromoItem = item.shelfId === 'D1';
 
           return (
             <div
-              key={shelf.id}
+              key={item.shelfId}
               className={`p-4 rounded-xl border transition-all ${
                 isCritical 
                   ? 'bg-rose-500/5 border-rose-300' 
@@ -41,15 +69,20 @@ export default function ExpiryIntel({ shelves, onTriggerPromotion }) {
             >
               <div className="flex justify-between items-start">
                 <div>
-                  <span className="font-bold text-xs text-[#2a3723]">{shelf.item}</span>
-                  <span className="text-[10px] text-[#2a3723]/50 font-mono ml-2">Shelf: {shelf.id}</span>
+                  <span className="font-bold text-xs text-[#2a3723]">{item.productName}</span>
+                  <span className="text-[10px] text-[#2a3723]/50 font-mono ml-2">Shelf: {item.shelfId}</span>
+                  {item.fefoPriority && (
+                    <span className="ml-2 bg-[#2a3723] text-white text-[9px] font-mono px-1.5 py-0.5 rounded font-extrabold">
+                      FEFO #{item.fefoPriority}
+                    </span>
+                  )}
                 </div>
                 <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-extrabold ${
                   isCritical 
                     ? 'bg-rose-100 text-rose-700 animate-pulse' 
                     : 'bg-[#2a3723]/10 text-[#2a3723]'
                 }`}>
-                  {shelf.expiryDays} DAYS REMAINING
+                  {item.daysUntilExpiry} DAYS REMAINING
                 </span>
               </div>
 
@@ -57,11 +90,13 @@ export default function ExpiryIntel({ shelves, onTriggerPromotion }) {
               <div className="grid grid-cols-2 gap-4 mt-3 text-xs text-[#2a3723]/70 font-medium">
                 <div>
                   <div className="text-[10px] text-[#2a3723]/50 uppercase">Current Stock</div>
-                  <span className="font-bold text-[#2a3723] font-mono">{shelf.quantity}</span> units
+                  <span className="font-bold text-[#2a3723] font-mono">{item.currentStock}</span> units
                 </div>
                 <div>
-                  <div className="text-[10px] text-[#2a3723]/50 uppercase">Sales Velocity</div>
-                  <span className="font-bold text-[#2a3723] capitalize">{shelf.demand}</span>
+                  <div className="text-[10px] text-[#2a3723]/50 uppercase">Dispatch Status</div>
+                  <span className={`font-bold capitalize ${isCritical ? 'text-rose-700 font-extrabold' : 'text-[#2a3723]'}`}>
+                    {item.dispatchRecommendation || (isCritical ? 'DISPATCH_NOW' : 'DISPATCH_NEXT')}
+                  </span>
                 </div>
               </div>
 
@@ -73,7 +108,7 @@ export default function ExpiryIntel({ shelves, onTriggerPromotion }) {
                     <span className="font-bold text-amber-700">AI Recommendation: </span>
                     {isCritical ? (
                       <span>
-                        Low sales velocity means these {shelf.quantity} units are highly likely to expire. 
+                        Low sales velocity means these {item.currentStock} units are highly likely to expire (Estimated exposure: {item.estimatedExpiryExposure || 0} units). 
                         Move immediately to the <strong className="text-[#2a3723]">Promotion Aisle</strong> at a 30% discount bundle.
                       </span>
                     ) : (
@@ -87,7 +122,7 @@ export default function ExpiryIntel({ shelves, onTriggerPromotion }) {
                 {/* Apply recommendation button */}
                 {isCritical && !isPromoItem && (
                   <button
-                    onClick={() => handleApplyPromo(shelf)}
+                    onClick={() => handleApplyPromo(item.shelfId)}
                     className="self-end text-[10px] bg-amber-600 hover:bg-amber-700 text-white font-bold py-1.5 px-3 rounded-lg flex items-center gap-1 transition-all cursor-pointer shadow-sm"
                   >
                     <span>Execute Promo Move</span>

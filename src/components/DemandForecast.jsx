@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { TrendingUp, CloudSun, Calendar, Percent, ShieldCheck } from 'lucide-react';
+import { api } from '../services/api';
 
 export default function DemandForecast({ demandHistory = {}, products = [] }) {
   const [selectedItem, setSelectedItem] = useState('Milk');
@@ -8,99 +9,66 @@ export default function DemandForecast({ demandHistory = {}, products = [] }) {
   const [festival, setFestival] = useState('none'); // none, active
   const [promo, setPromo] = useState('none'); // none, active
 
+  const [forecastData, setForecastData] = useState(null);
+
   const items = Object.keys(demandHistory).length > 0
     ? Object.keys(demandHistory)
     : ['Milk', 'Cheese', 'Rice', 'Wheat', 'Laptops', 'Phones'];
 
-  // Base forecasts and multipliers
-  const getMultiplier = () => {
-    let mult = 1.0;
-    if (weather === 'rain' && selectedItem === 'Milk') mult += 0.25;
-    if (weather === 'rain' && selectedItem === 'Laptops') mult -= 0.15;
-    if (festival === 'active') mult += 0.50;
-    if (promo === 'active') mult += 0.40;
-    return mult;
-  };
-
-  const multiplier = getMultiplier();
-
-  // Generate chart data using backend demandHistory or fallback
-  const generateData = () => {
-    const historicalBase = {
-      Milk: [120, 115, 130, 125, 140, 155, 150],
-      Cheese: [45, 48, 42, 50, 52, 60, 58],
-      Rice: [280, 290, 310, 305, 320, 340, 330],
-      Wheat: [190, 200, 185, 210, 220, 235, 225],
-      Laptops: [12, 10, 15, 14, 16, 18, 17],
-      Phones: [38, 35, 42, 40, 48, 55, 50]
+  // Fetch backend-calculated forecast intelligence from REST API
+  useEffect(() => {
+    const fetchForecast = async () => {
+      try {
+        const data = await api.getDemandForecast(selectedItem, { weather, festival, promo });
+        if (data && data.products && data.products.length > 0) {
+          setForecastData(data.products[0]);
+        }
+      } catch (err) {
+        console.error('Failed to fetch demand forecast from backend REST API:', err);
+      }
     };
+    fetchForecast();
+  }, [selectedItem, weather, festival, promo]);
 
-    const forecastBase = {
-      Milk: [160, 165, 180, 200, 210, 230, 250],
-      Cheese: [62, 65, 70, 75, 82, 85, 90],
-      Rice: [340, 355, 370, 390, 410, 430, 450],
-      Wheat: [230, 240, 255, 270, 290, 310, 330],
-      Laptops: [19, 21, 23, 25, 28, 30, 32],
-      Phones: [52, 58, 62, 68, 74, 80, 85]
-    };
+  // Format Recharts dataset from backend forecast data
+  const generateChartData = () => {
+    if (!forecastData) return [];
 
-    const itemHistory = demandHistory[selectedItem]?.historicalSales || historicalBase[selectedItem] || [100, 110, 105, 120, 125, 130, 135];
-    const itemForecast = demandHistory[selectedItem]?.forecastSales || forecastBase[selectedItem] || [140, 145, 150, 160, 170, 180, 190];
-    const days = demandHistory[selectedItem]?.dates || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const historicalSales = forecastData.historicalSales || [120, 115, 130, 125, 140, 155, 150];
+    const historicalDates = forecastData.historicalDates || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const forecastVector = forecastData.forecast || [];
 
     const data = [];
 
     // History (last 7 days)
-    days.forEach((day, index) => {
+    historicalDates.forEach((day, index) => {
       data.push({
         name: day,
-        sales: itemHistory[index] || 0,
+        sales: historicalSales[index] !== undefined ? historicalSales[index] : 0,
         forecast: null,
       });
     });
 
     // Forecast (next 7 days)
-    days.forEach((day, index) => {
-      const baseVal = itemForecast[index] || 100;
-      const forecastedVal = Math.round(baseVal * multiplier);
-      
-      // Hook Sunday (day index 6) of history to Monday forecast to make a continuous line
-      if (index === 0 && data.length > 6) {
-        data[6].forecast = data[6].sales;
+    forecastVector.forEach((f, index) => {
+      if (index === 0 && data.length > 0) {
+        data[data.length - 1].forecast = data[data.length - 1].sales;
       }
-
       data.push({
-        name: `Next ${day}`,
+        name: f.name,
         sales: null,
-        forecast: forecastedVal
+        forecast: f.predictedDemand
       });
     });
 
     return data;
   };
 
-  const chartData = generateData();
+  const chartData = generateChartData();
 
-  // Recommendation builder
-  const getRecommendation = () => {
-    const totalPredictedDemand = chartData
-      .filter(d => d.forecast !== null)
-      .reduce((sum, d) => sum + d.forecast, 0);
-
-    const targetProduct = products.find(p => p.name.toLowerCase() === selectedItem.toLowerCase());
-    const unitPrice = targetProduct?.unitPrice || { Milk: 60, Cheese: 120, Rice: 80, Wheat: 70, Laptops: 45000, Phones: 25000 }[selectedItem] || 100;
-
-    const baseOrder = { Milk: 200, Cheese: 80, Rice: 400, Wheat: 300, Laptops: 25, Phones: 70 }[selectedItem] || 150;
-    const orderQuantity = Math.round(baseOrder * multiplier);
-
-    return {
-      total: totalPredictedDemand,
-      order: orderQuantity,
-      impact: Math.round(orderQuantity * unitPrice * 0.15)
-    };
-  };
-
-  const recommendation = getRecommendation();
+  const totalPredictedDemand = forecastData?.totalWeeklyPredictedDemand || 0;
+  const recommendedOrder = forecastData?.recommendedReorderQty || 0;
+  const expectedImpact = forecastData?.expectedRevenueImpact || 0;
 
   return (
     <div className="glass-panel p-6 rounded-2xl flex flex-col h-full">
@@ -111,7 +79,7 @@ export default function DemandForecast({ demandHistory = {}, products = [] }) {
             <TrendingUp className="w-5 h-5 text-[#2a3723]" />
             <h3 className="text-xl font-bold text-[#2a3723]">Demand Forecasting</h3>
           </div>
-          <p className="text-xs text-[#2a3723]/70 mt-0.5 font-medium">7-day historical sales vs predicted AI models (Prophet/LSTM)</p>
+          <p className="text-xs text-[#2a3723]/70 mt-0.5 font-medium">Deterministic 7-day Weighted Moving Average & Stockout Intelligence</p>
         </div>
 
         {/* Item Selector */}
@@ -126,7 +94,7 @@ export default function DemandForecast({ demandHistory = {}, products = [] }) {
         </select>
       </div>
 
-      {/* modifier settings */}
+      {/* Modifier Settings */}
       <div className="grid grid-cols-3 gap-3 mb-5">
         <div className={`p-3 rounded-xl border transition-all ${
           weather === 'rain' 
@@ -238,7 +206,7 @@ export default function DemandForecast({ demandHistory = {}, products = [] }) {
               connectNulls
             />
             <Area
-              name="AI Predictive Demand"
+              name="Deterministic Forecast"
               type="monotone"
               dataKey="forecast"
               stroke="#5a6e50"
@@ -256,13 +224,24 @@ export default function DemandForecast({ demandHistory = {}, products = [] }) {
       <div className="mt-4 p-4 rounded-xl bg-[#2a3723]/5 border border-[#2a3723]/10 flex items-start gap-3">
         <ShieldCheck className="w-5 h-5 text-[#2a3723] shrink-0 mt-0.5" />
         <div>
-          <div className="text-xs font-bold text-[#2a3723]">AI Supply Chain Recommendation</div>
+          <div className="text-xs font-bold text-[#2a3723] flex items-center gap-2">
+            AI Supply Chain Recommendation
+            {forecastData && (
+              <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                forecastData.stockoutRisk === 'CRITICAL' ? 'bg-red-200 text-red-900' :
+                forecastData.stockoutRisk === 'HIGH' ? 'bg-amber-200 text-amber-900' :
+                'bg-green-200 text-green-900'
+              }`}>
+                RISK: {forecastData.stockoutRisk} ({forecastData.daysOfSupply !== null ? `${forecastData.daysOfSupply} Days` : 'N/A'})
+              </span>
+            )}
+          </div>
           <p className="text-[11px] text-[#2a3723]/80 mt-1 font-medium leading-relaxed">
-            Total expected demand for next week is <span className="font-bold text-[#2a3723] font-mono">{recommendation.total}</span> units. 
-            We recommend creating a Purchase Order of <span className="font-bold text-[#2a3723] font-mono">{recommendation.order} {selectedItem}</span> today.
+            Total expected demand for next week is <span className="font-bold text-[#2a3723] font-mono">{totalPredictedDemand}</span> units. 
+            We recommend creating a Purchase Order of <span className="font-bold text-[#2a3723] font-mono">{recommendedOrder} {selectedItem}</span> today (Cap Limit: {forecastData?.capacity || 120}).
           </p>
           <div className="text-[10px] text-[#2a3723] font-bold mt-1">
-            Expected Revenue Impact: ~₹{recommendation.impact.toLocaleString('en-IN')}
+            Expected Revenue Impact: ~₹{expectedImpact.toLocaleString('en-IN')}
           </div>
         </div>
       </div>

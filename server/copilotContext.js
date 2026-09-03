@@ -1,6 +1,5 @@
 import {
   warehouse,
-  zones,
   products,
   shelves,
   cameraData,
@@ -8,19 +7,22 @@ import {
   detectionHistory,
   alerts,
   agvs,
-  demandHistory,
   getEnrichedShelves,
   getActiveDiscrepancies
 } from './warehouseStore.js';
+import { calculateDemandForecast } from './demandForecast.js';
+import { calculateExpiryIntelligence } from './expiryIntelligence.js';
+import { calculateOccupancyIntelligence } from './occupancyIntelligence.js';
 
 /**
  * Classifies query intent based on keywords
  */
 export function classifyQueryIntent(message = '') {
   const q = message.toLowerCase();
-  if (q.includes('stockout') || q.includes('risk') || q.includes('reorder')) return 'stockout';
+  if (q.includes('occupancy') || q.includes('capacity') || q.includes('underutilized') || q.includes('overflow') || q.includes('near full') || q.includes('space') || q.includes('volume')) return 'occupancy';
+  if (q.includes('expiry') || q.includes('expir') || q.includes('fefo') || q.includes('perishable') || q.includes('shelf life') || q.includes('dispatch first')) return 'expiry';
+  if (q.includes('stockout') || q.includes('forecast') || q.includes('demand') || q.includes('reorder')) return 'stockout';
   if (q.includes('discrepancy') || q.includes('mismatch') || q.includes('count')) return 'discrepancy';
-  if (q.includes('expiry') || q.includes('expir') || q.includes('perishable') || q.includes('shelf life')) return 'expiry';
   if (q.includes('safety') || q.includes('helmet') || q.includes('hazard') || q.includes('violation') || q.includes('ppe')) return 'safety';
   if (q.includes('agv') || q.includes('robot') || q.includes('fleet') || q.includes('transport')) return 'agv';
   if (q.includes('history') || q.includes('audit scan') || q.includes('historical scan')) return 'historical_cv';
@@ -29,48 +31,109 @@ export function classifyQueryIntent(message = '') {
 }
 
 /**
- * Builds server-authoritative context for Gemini based on live warehouseStore telemetry.
- * Keeps context concise, focused, and structured.
+ * Builds server-authoritative context for Gemini based on live warehouseStore telemetry,
+ * Demand Forecast, Expiry/FEFO, and Occupancy Intelligence.
  */
 export function buildCopilotContext(userMessage = '') {
   const intent = classifyQueryIntent(userMessage);
   const enrichedShelves = getEnrichedShelves();
   const activeDiscrepancies = getActiveDiscrepancies();
+  const forecastData = calculateDemandForecast();
+  const expiryData = calculateExpiryIntelligence();
+  const occupancyData = calculateOccupancyIntelligence();
 
   const baseContext = {
     facility: {
       warehouseId: warehouse.warehouseId,
       name: warehouse.name,
-      status: warehouse.status,
-      dimensions: warehouse.dimensions
+      status: warehouse.status
     },
+    forecastHorizonDays: 7,
     intentCategory: intent
   };
 
-  // High Stockout Risk Items (Backend calculated)
-  const highRiskShelves = enrichedShelves.filter(s => s.stockoutRiskLevel === 'CRITICAL' || s.stockoutRiskLevel === 'HIGH');
-  
-  // Low Stock Items (<20% occupancy)
-  const lowStockShelves = enrichedShelves.filter(s => s.quantity / s.capacity < 0.2);
+  const highRiskShelves = forecastData.products.filter(p => p.stockoutRisk === 'CRITICAL' || p.stockoutRisk === 'HIGH');
 
-  // Expiring Products (within 14 days)
-  const expiringShelves = enrichedShelves.filter(s => s.expiryDays && s.expiryDays <= 14);
-
-  // Intent-specific Context Augmentation
   switch (intent) {
+    case 'occupancy':
+      return {
+        ...baseContext,
+        inventoryCapacityOccupancy: occupancyData.inventoryCapacityOccupancy,
+        zonesBreakdown: occupancyData.zones,
+        nearFullShelves: occupancyData.nearFullShelves.map(s => ({
+          shelfId: s.shelfId,
+          product: s.productName,
+          stock: s.currentStock,
+          capacity: s.capacity,
+          occupancyPercentage: `${s.currentOccupancyPercentage}%`,
+          status: s.status
+        })),
+        underutilizedShelves: occupancyData.underutilizedShelves.map(s => ({
+          shelfId: s.shelfId,
+          product: s.productName,
+          stock: s.currentStock,
+          capacity: s.capacity,
+          occupancyPercentage: `${s.currentOccupancyPercentage}%`,
+          status: s.status
+        })),
+        overflowRiskShelves: occupancyData.overflowRiskShelves.map(s => ({
+          shelfId: s.shelfId,
+          product: s.productName,
+          stock: s.currentStock,
+          capacity: s.capacity,
+          occupancyPercentage: `${s.currentOccupancyPercentage}%`,
+          status: s.status
+        })),
+        projectedOccupancy7Days: {
+          projectionType: occupancyData.predictionMetaData.projectionType,
+          assumption: occupancyData.predictionMetaData.assumption,
+          shelvesProjection: occupancyData.shelves.map(s => ({
+            shelfId: s.shelfId,
+            product: s.productName,
+            currentOccupancy: `${s.currentOccupancyPercentage}%`,
+            projectedStock7Days: s.projectedStock7Days,
+            projectedOccupancy7Days: `${s.projectedOccupancyPercentage7Days}%`,
+            projectedStatus: s.projectedStatus7Days
+          }))
+        }
+      };
+
+    case 'expiry':
+      return {
+        ...baseContext,
+        fefoDispatchIntelligence: expiryData.items.map(item => ({
+          fefoPriority: item.fefoPriority ? `FEFO #${item.fefoPriority}` : 'N/A',
+          shelfId: item.shelfId,
+          product: item.productName,
+          sku: item.sku,
+          currentStock: item.currentStock,
+          expiryDate: item.expiryDate,
+          daysUntilExpiry: item.daysUntilExpiry,
+          expiryStatus: item.expiryStatus,
+          forecastDailyDemand: item.forecastDailyDemand,
+          estimatedExpiryExposure: item.estimatedExpiryExposure,
+          dispatchRecommendation: item.dispatchRecommendation
+        })),
+        fefoTopPriority: expiryData.items.filter(i => i.fefoPriority !== null)
+      };
+
     case 'stockout':
       return {
         ...baseContext,
-        shelvesSummary: enrichedShelves.map(s => ({
-          shelfId: s.id,
-          product: s.item,
-          quantity: s.quantity,
-          capacity: s.capacity,
-          stockoutRiskScore: s.stockoutRiskScore,
-          stockoutRiskLevel: s.stockoutRiskLevel,
-          reorderLevel: s.reorderLevel
+        forecastIntelligence: forecastData.products.map(p => ({
+          shelfId: p.shelfId,
+          product: p.productName,
+          sku: p.sku,
+          currentStock: p.currentStock,
+          capacity: p.capacity,
+          averageDailyDemand: p.averageDailyDemand,
+          forecastDailyDemand: p.forecastDailyDemand,
+          daysOfSupply: p.daysOfSupply,
+          trend: p.trend,
+          stockoutRisk: p.stockoutRisk,
+          recommendedReorderQty: p.recommendedReorderQty
         })),
-        highRiskProducts: highRiskShelves
+        highestStockoutRiskProducts: highRiskShelves
       };
 
     case 'discrepancy':
@@ -82,18 +145,6 @@ export function buildCopilotContext(userMessage = '') {
           location: cam.location,
           hasAnomaly: cam.hasAnomaly,
           anomalyType: cam.anomalyType
-        }))
-      };
-
-    case 'expiry':
-      return {
-        ...baseContext,
-        expiringItems: expiringShelves.map(s => ({
-          shelfId: s.id,
-          product: s.item,
-          quantity: s.quantity,
-          expiryDays: s.expiryDays,
-          fefoPriority: s.expiryDays <= 4 ? 'HIGH (Dispatch First)' : 'MEDIUM'
         }))
       };
 
@@ -112,7 +163,7 @@ export function buildCopilotContext(userMessage = '') {
     case 'historical_cv':
       return {
         ...baseContext,
-        recentScans: detectionHistory.slice(-5) // Send only top 5 recent audit scans
+        recentScans: detectionHistory.slice(-5)
       };
 
     case 'inventory':
@@ -120,6 +171,11 @@ export function buildCopilotContext(userMessage = '') {
     default:
       return {
         ...baseContext,
+        inventoryCapacityOccupancy: occupancyData.inventoryCapacityOccupancy,
+        zonesCount: occupancyData.zones.length,
+        nearFullCount: occupancyData.nearFullShelvesCount,
+        underutilizedCount: occupancyData.underutilizedShelvesCount,
+        overflowCount: occupancyData.overflowRiskShelvesCount,
         shelvesSummary: enrichedShelves.map(s => ({
           shelfId: s.id,
           product: s.item,
@@ -133,9 +189,7 @@ export function buildCopilotContext(userMessage = '') {
         })),
         activeDiscrepanciesCount: activeDiscrepancies.length,
         activeAlertsCount: alerts.length,
-        agvCount: agvs.length,
-        highRiskCount: highRiskShelves.length,
-        expiringCount: expiringShelves.length
+        agvCount: agvs.length
       };
   }
 }

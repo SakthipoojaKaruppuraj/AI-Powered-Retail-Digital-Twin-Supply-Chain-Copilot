@@ -67,6 +67,41 @@ export const api = {
     return res.json();
   },
 
+  // Deterministic Demand Forecasting REST API
+  async getDemandForecast(product = '', modifiers = {}) {
+    const queryParams = new URLSearchParams();
+    if (product) queryParams.append('product', product);
+    if (modifiers.weather) queryParams.append('weather', modifiers.weather);
+    if (modifiers.festival) queryParams.append('festival', modifiers.festival);
+    if (modifiers.promo) queryParams.append('promo', modifiers.promo);
+
+    const res = await fetch(`${API_BASE}/demand-forecast?${queryParams.toString()}`);
+    if (!res.ok) throw new Error('Failed to fetch demand forecast intelligence');
+    return res.json();
+  },
+
+  // Deterministic Expiry Intelligence & FEFO REST API
+  async getExpiryIntelligence(product = '') {
+    const queryParams = new URLSearchParams();
+    if (product) queryParams.append('product', product);
+
+    const res = await fetch(`${API_BASE}/expiry-intelligence?${queryParams.toString()}`);
+    if (!res.ok) throw new Error('Failed to fetch expiry intelligence');
+    return res.json();
+  },
+
+  // Deterministic Occupancy Intelligence & 7-Day Projection REST API
+  async getOccupancyIntelligence(zone = '', shelf = '', product = '') {
+    const queryParams = new URLSearchParams();
+    if (zone) queryParams.append('zone', zone);
+    if (shelf) queryParams.append('shelf', shelf);
+    if (product) queryParams.append('product', product);
+
+    const res = await fetch(`${API_BASE}/occupancy-intelligence?${queryParams.toString()}`);
+    if (!res.ok) throw new Error('Failed to fetch occupancy intelligence');
+    return res.json();
+  },
+
   // Computer Vision Processing Pipeline
   async getCameras() {
     const res = await fetch(`${API_BASE}/cameras`);
