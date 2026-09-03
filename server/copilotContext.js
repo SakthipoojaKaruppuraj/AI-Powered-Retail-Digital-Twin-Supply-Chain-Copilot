@@ -13,17 +13,18 @@ import {
 import { calculateDemandForecast } from './demandForecast.js';
 import { calculateExpiryIntelligence } from './expiryIntelligence.js';
 import { calculateOccupancyIntelligence } from './occupancyIntelligence.js';
+import { calculateSafetyIntelligence } from './safetyIntelligence.js';
 
 /**
  * Classifies query intent based on keywords
  */
 export function classifyQueryIntent(message = '') {
   const q = message.toLowerCase();
+  if (q.includes('safety') || q.includes('helmet') || q.includes('hazard') || q.includes('violation') || q.includes('ppe') || q.includes('exit') || q.includes('obstruction') || q.includes('compliance')) return 'safety';
   if (q.includes('occupancy') || q.includes('capacity') || q.includes('underutilized') || q.includes('overflow') || q.includes('near full') || q.includes('space') || q.includes('volume')) return 'occupancy';
   if (q.includes('expiry') || q.includes('expir') || q.includes('fefo') || q.includes('perishable') || q.includes('shelf life') || q.includes('dispatch first')) return 'expiry';
   if (q.includes('stockout') || q.includes('forecast') || q.includes('demand') || q.includes('reorder')) return 'stockout';
   if (q.includes('discrepancy') || q.includes('mismatch') || q.includes('count')) return 'discrepancy';
-  if (q.includes('safety') || q.includes('helmet') || q.includes('hazard') || q.includes('violation') || q.includes('ppe')) return 'safety';
   if (q.includes('agv') || q.includes('robot') || q.includes('fleet') || q.includes('transport')) return 'agv';
   if (q.includes('history') || q.includes('audit scan') || q.includes('historical scan')) return 'historical_cv';
   if (q.includes('shelf') || q.includes('stock') || q.includes('quantity') || q.includes('inventory')) return 'inventory';
@@ -32,7 +33,7 @@ export function classifyQueryIntent(message = '') {
 
 /**
  * Builds server-authoritative context for Gemini based on live warehouseStore telemetry,
- * Demand Forecast, Expiry/FEFO, and Occupancy Intelligence.
+ * Demand Forecast, Expiry/FEFO, Occupancy, and Safety Intelligence.
  */
 export function buildCopilotContext(userMessage = '') {
   const intent = classifyQueryIntent(userMessage);
@@ -41,6 +42,7 @@ export function buildCopilotContext(userMessage = '') {
   const forecastData = calculateDemandForecast();
   const expiryData = calculateExpiryIntelligence();
   const occupancyData = calculateOccupancyIntelligence();
+  const safetyData = calculateSafetyIntelligence();
 
   const baseContext = {
     facility: {
@@ -55,6 +57,25 @@ export function buildCopilotContext(userMessage = '') {
   const highRiskShelves = forecastData.products.filter(p => p.stockoutRisk === 'CRITICAL' || p.stockoutRisk === 'HIGH');
 
   switch (intent) {
+    case 'safety':
+      return {
+        ...baseContext,
+        safetySummary: safetyData.summary,
+        highestRiskLevel: safetyData.highestRiskLevel,
+        zoneRisks: safetyData.zoneRisks,
+        activeSafetyAlerts: safetyData.alerts.map(a => ({
+          alertId: a.id,
+          text: a.text,
+          category: a.category,
+          severity: a.severity,
+          operationalPriority: a.operationalPriority,
+          recommendation: a.recommendation,
+          zone: a.zone,
+          time: a.time,
+          status: a.status
+        }))
+      };
+
     case 'occupancy':
       return {
         ...baseContext,
@@ -148,12 +169,6 @@ export function buildCopilotContext(userMessage = '') {
         }))
       };
 
-    case 'safety':
-      return {
-        ...baseContext,
-        activeAlerts: alerts
-      };
-
     case 'agv':
       return {
         ...baseContext,
@@ -171,6 +186,8 @@ export function buildCopilotContext(userMessage = '') {
     default:
       return {
         ...baseContext,
+        safetySummary: safetyData.summary,
+        highestSafetyRisk: safetyData.highestRiskLevel,
         inventoryCapacityOccupancy: occupancyData.inventoryCapacityOccupancy,
         zonesCount: occupancyData.zones.length,
         nearFullCount: occupancyData.nearFullShelvesCount,
@@ -188,7 +205,7 @@ export function buildCopilotContext(userMessage = '') {
           zone: s.zone
         })),
         activeDiscrepanciesCount: activeDiscrepancies.length,
-        activeAlertsCount: alerts.length,
+        activeAlertsCount: safetyData.summary.activeAlerts,
         agvCount: agvs.length
       };
   }

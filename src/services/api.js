@@ -102,6 +102,20 @@ export const api = {
     return res.json();
   },
 
+  // Deterministic Safety Intelligence REST API
+  async getSafetyIntelligence(filters = {}) {
+    const queryParams = new URLSearchParams();
+    if (filters.zone) queryParams.append('zone', filters.zone);
+    if (filters.severity) queryParams.append('severity', filters.severity);
+    if (filters.status) queryParams.append('status', filters.status);
+    if (filters.camera) queryParams.append('camera', filters.camera);
+    if (filters.shelf) queryParams.append('shelf', filters.shelf);
+
+    const res = await fetch(`${API_BASE}/safety-intelligence?${queryParams.toString()}`);
+    if (!res.ok) throw new Error('Failed to fetch safety intelligence');
+    return res.json();
+  },
+
   // Computer Vision Processing Pipeline
   async getCameras() {
     const res = await fetch(`${API_BASE}/cameras`);
