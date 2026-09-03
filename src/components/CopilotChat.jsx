@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, CornerDownLeft, Sparkles, AlertCircle } from 'lucide-react';
+import { api } from '../services/api';
 
 export default function CopilotChat({ shelves, cameraData, alerts, onExecuteAction }) {
   const [messages, setMessages] = useState([
     {
       sender: 'assistant',
-      text: "Hello! I am your AI Supply Chain Copilot. I monitor live database status, camera feeds, forecasts, and safety compliance logs in real time. Ask me anything or select a task chip below.",
+      text: "Hello! I am your AI Supply Chain Copilot connected to the Gemini LLM engine. I monitor live database status, camera feeds, forecasts, and safety logs in real time. Ask me anything or select a task chip below.",
       time: 'Just now'
     }
   ]);
@@ -28,7 +29,7 @@ export default function CopilotChat({ shelves, cameraData, alerts, onExecuteActi
     scrollToBottom();
   }, [messages, isTyping]);
 
-  const handleSend = (text) => {
+  const handleSend = async (text) => {
     if (!text.trim()) return;
 
     // User Message
@@ -42,92 +43,23 @@ export default function CopilotChat({ shelves, cameraData, alerts, onExecuteActi
     setInputText('');
     setIsTyping(true);
 
-    // Simulate AI response delay
-    setTimeout(() => {
-      let aiResponse = {};
-      const query = text.toLowerCase();
-
-      if (query.includes('stockout') || query.includes('risk') || query.includes('low')) {
-        // Stock-out check
-        const lowShelves = shelves.filter(s => s.quantity / s.capacity < 0.2);
-        if (lowShelves.length > 0) {
-          aiResponse = {
-            sender: 'assistant',
-            text: `I've analyzed our digital twin telemetry. We have **${lowShelves.length} shelves** showing high stock-out risk.`,
-            table: {
-              headers: ['Shelf', 'Product', 'Stock', 'Fill Rate'],
-              rows: lowShelves.map(s => [s.id, s.item, `${s.quantity} / ${s.capacity}`, `${Math.round((s.quantity / s.capacity)*100)}%`])
-            },
-            cta: {
-              label: 'Trigger Restock Purchase Order',
-              actionType: 'restock_all',
-              detail: 'Fills all shelves to 90% capacity'
-            }
-          };
-        } else {
-          aiResponse = {
-            sender: 'assistant',
-            text: 'I ran a capacity scan. All shelves are currently stocked above critical levels (>20%). No immediate purchase orders required.'
-          };
-        }
-      } else if (query.includes('dairy') || query.includes('milk') || query.includes('decrease')) {
-        // Dairy drop analysis
-        aiResponse = {
-          sender: 'assistant',
-          text: `### Dairy Category Analysis:\n\n1. **Supplier Bottleneck**: Dairy deliveries from Supplier *Milco Corp* decreased by **18%** this week due to shipping delays.\n2. **Out of Stock**: Mismatches occurred on Tuesday when camera feeds detected Shelf A1 empty before database records updated.\n3. **Holiday Demand**: Customer demand surged by **25%** due to the summer festival season.\n\n**Recommendations:**\n* Move expiring Milk from Shelf A1 to Promo Rack D1.\n* Increase weekly milk purchase orders by **20%** to build safety stock buffer.`,
-          cta: {
-            label: 'Move Expiring Milk to Promo Rack',
-            actionType: 'promo_move',
-            detail: 'Relocates milk to checkout promotion rack'
-          }
-        };
-      } else if (query.includes('safety') || query.includes('helmet') || query.includes('violation')) {
-        // Safety audit
-        if (alerts.length > 0) {
-          aiResponse = {
-            sender: 'assistant',
-            text: `Our computer vision monitoring system has flagged **${alerts.length} active safety violations** requiring immediate manager attention.`,
-            list: alerts.map(a => `${a.text} (${a.zone}) - Severity: ${a.severity.toUpperCase()}`),
-            cta: {
-              label: 'Dispatch Safety Warden',
-              actionType: 'clear_safety',
-              detail: 'Clears all active safety alarms'
-            }
-          };
-        } else {
-          aiResponse = {
-            sender: 'assistant',
-            text: 'Safety scan complete: **100% Compliance**. All personnel detected are wearing helmets/vests, emergency exits are clear, and forklifts are adhering to the speed limit of 5 km/h.'
-          };
-        }
-      } else if (query.includes('expiry') || query.includes('expir')) {
-        // Expiry intelligence
-        const expiring = shelves.filter(s => s.expiryDays && s.expiryDays <= 14);
-        aiResponse = {
-          sender: 'assistant',
-          text: `My expiry intelligence algorithms identify **${expiring.length} perishables** expiring within 14 days.`,
-          table: {
-            headers: ['Shelf', 'Item', 'Days to Expiry', 'Daily Demand'],
-            rows: expiring.map(s => [s.id, s.item, `${s.expiryDays} days`, s.demand])
-          },
-          cta: {
-            label: 'Shift Milk (4 Days Exp) to Promotion',
-            actionType: 'promo_move',
-            detail: 'Applies 30% discount layout bundle'
-          }
-        };
-      } else {
-        // Generic chatbot response
-        aiResponse = {
-          sender: 'assistant',
-          text: `I've received your query: "${text}". I am monitoring the database, pathfinder coordinates, and cameras. Let me know if you would like me to:\n1. **Check stock-out risks**\n2. **Analyze dairy sales drops**\n3. **Audit safety compliance alerts**\n4. **Pull near-expiry perishable products**`
-        };
-      }
-
-      aiResponse.time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    try {
+      // Send ONLY user message text to backend API (server uses its authoritative warehouseStore)
+      const aiResponse = await api.sendCopilotMessage(text);
       setMessages(prev => [...prev, aiResponse]);
+    } catch (err) {
+      console.error('Failed to get Copilot response:', err);
+      setMessages(prev => [
+        ...prev,
+        {
+          sender: 'assistant',
+          text: '⚠️ **Copilot System Notice**: Error communicating with AI server. Please check backend connection.',
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }
+      ]);
+    } finally {
       setIsTyping(false);
-    }, 1000);
+    }
   };
 
   const handleCtaClick = (actionType) => {

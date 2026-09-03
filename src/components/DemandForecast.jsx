@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { TrendingUp, CloudSun, Calendar, Percent, ShieldCheck } from 'lucide-react';
 
-export default function DemandForecast() {
+export default function DemandForecast({ demandHistory = {}, products = [] }) {
   const [selectedItem, setSelectedItem] = useState('Milk');
   const [weather, setWeather] = useState('sunny'); // sunny, rain
   const [festival, setFestival] = useState('none'); // none, active
   const [promo, setPromo] = useState('none'); // none, active
 
-  const items = ['Milk', 'Cheese', 'Rice', 'Wheat', 'Laptops', 'Phones'];
+  const items = Object.keys(demandHistory).length > 0
+    ? Object.keys(demandHistory)
+    : ['Milk', 'Cheese', 'Rice', 'Wheat', 'Laptops', 'Phones'];
 
   // Base forecasts and multipliers
   const getMultiplier = () => {
@@ -22,7 +24,7 @@ export default function DemandForecast() {
 
   const multiplier = getMultiplier();
 
-  // Generate data based on selected item and modifiers
+  // Generate chart data using backend demandHistory or fallback
   const generateData = () => {
     const historicalBase = {
       Milk: [120, 115, 130, 125, 140, 155, 150],
@@ -42,25 +44,28 @@ export default function DemandForecast() {
       Phones: [52, 58, 62, 68, 74, 80, 85]
     };
 
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const itemHistory = demandHistory[selectedItem]?.historicalSales || historicalBase[selectedItem] || [100, 110, 105, 120, 125, 130, 135];
+    const itemForecast = demandHistory[selectedItem]?.forecastSales || forecastBase[selectedItem] || [140, 145, 150, 160, 170, 180, 190];
+    const days = demandHistory[selectedItem]?.dates || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
     const data = [];
 
     // History (last 7 days)
     days.forEach((day, index) => {
       data.push({
         name: day,
-        sales: historicalBase[selectedItem][index],
+        sales: itemHistory[index] || 0,
         forecast: null,
       });
     });
 
     // Forecast (next 7 days)
     days.forEach((day, index) => {
-      const baseVal = forecastBase[selectedItem][index];
+      const baseVal = itemForecast[index] || 100;
       const forecastedVal = Math.round(baseVal * multiplier);
       
       // Hook Sunday (day index 6) of history to Monday forecast to make a continuous line
-      if (index === 0) {
+      if (index === 0 && data.length > 6) {
         data[6].forecast = data[6].sales;
       }
 
@@ -82,13 +87,16 @@ export default function DemandForecast() {
       .filter(d => d.forecast !== null)
       .reduce((sum, d) => sum + d.forecast, 0);
 
-    const baseOrder = { Milk: 200, Cheese: 80, Rice: 400, Wheat: 300, Laptops: 25, Phones: 70 }[selectedItem];
+    const targetProduct = products.find(p => p.name.toLowerCase() === selectedItem.toLowerCase());
+    const unitPrice = targetProduct?.unitPrice || { Milk: 60, Cheese: 120, Rice: 80, Wheat: 70, Laptops: 45000, Phones: 25000 }[selectedItem] || 100;
+
+    const baseOrder = { Milk: 200, Cheese: 80, Rice: 400, Wheat: 300, Laptops: 25, Phones: 70 }[selectedItem] || 150;
     const orderQuantity = Math.round(baseOrder * multiplier);
 
     return {
       total: totalPredictedDemand,
       order: orderQuantity,
-      impact: Math.round(orderQuantity * { Milk: 60, Cheese: 120, Rice: 80, Wheat: 70, Laptops: 45000, Phones: 25000 }[selectedItem] * 0.15)
+      impact: Math.round(orderQuantity * unitPrice * 0.15)
     };
   };
 

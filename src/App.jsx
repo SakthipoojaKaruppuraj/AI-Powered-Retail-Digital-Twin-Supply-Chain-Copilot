@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, 
   TrendingUp, 
@@ -7,9 +7,7 @@ import {
   FileText, 
   Menu, 
   Activity, 
-  Sparkles, 
-  ShieldAlert, 
-  RefreshCw 
+  ShieldAlert
 } from 'lucide-react';
 
 import DigitalTwin3D from './components/DigitalTwin3D';
@@ -22,60 +20,65 @@ import RouteOptimizer from './components/RouteOptimizer';
 import SafetyMonitor from './components/SafetyMonitor';
 import CopilotChat from './components/CopilotChat';
 import ReportGenerator from './components/ReportGenerator';
+import { api } from './services/api';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('twin'); // twin, forecasts, vision, copilot, report
 
-  // Central Database Inventory State
-  const [shelves, setShelves] = useState([
-    { id: 'A1', name: 'Shelf A1 (Dairy)', item: 'Milk', quantity: 98, capacity: 120, status: 'normal', expiryDays: 4, demand: 'increasing', row: 1, col: 1, zone: 'Aisle A' },
-    { id: 'A2', name: 'Shelf A2 (Dairy)', item: 'Cheese', quantity: 18, capacity: 50, status: 'low', expiryDays: 14, demand: 'stable', row: 2, col: 1, zone: 'Aisle A' },
-    { id: 'B1', name: 'Shelf B1 (Grains)', item: 'Rice', quantity: 340, capacity: 400, status: 'normal', expiryDays: 180, demand: 'stable', row: 1, col: 3, zone: 'Aisle B' },
-    { id: 'B2', name: 'Shelf B2 (Grains)', item: 'Wheat', quantity: 12, capacity: 300, status: 'low', expiryDays: 240, demand: 'increasing', row: 2, col: 3, zone: 'Aisle B' },
-    { id: 'C1', name: 'Shelf C1 (Electronics)', item: 'Laptops', quantity: 18, capacity: 20, status: 'normal', expiryDays: 999, row: 1, col: 5, zone: 'Aisle C' },
-    { id: 'C2', name: 'Shelf C2 (Electronics)', item: 'Phones', quantity: 45, capacity: 50, status: 'normal', expiryDays: 999, row: 2, col: 5, zone: 'Aisle C' },
-    { id: 'D1', name: 'Shelf D1 (Promo Rack)', item: 'Milk', quantity: 0, capacity: 100, status: 'empty', expiryDays: 0, row: 4, col: 5, zone: 'Promo Zone' },
-  ]);
-
-  // Central Camera Vision State
-  const [cameraData, setCameraData] = useState({
-    'cam-01': {
-      items: [
-        { name: 'Milk', cameraCount: 98, x: 20, y: 30, w: 25, h: 40, exp: '05-Jul-2026', barcode: '890123456789', isDamaged: false },
-        { name: 'Cheese', cameraCount: 18, x: 55, y: 35, w: 25, h: 30, exp: '15-Jul-2026', barcode: '890987654321', isDamaged: false }
-      ],
-      hasAnomaly: false,
-      anomalyType: ''
-    },
-    'cam-02': {
-      items: [
-        { name: 'Rice', cameraCount: 340, x: 15, y: 25, w: 30, h: 45, exp: '28-Dec-2026', barcode: '890345678123', isDamaged: false },
-        { name: 'Wheat', cameraCount: 12, x: 55, y: 30, w: 30, h: 40, exp: '10-Mar-2027', barcode: '890765432198', isDamaged: false }
-      ],
-      hasAnomaly: false,
-      anomalyType: ''
-    },
-    'cam-03': {
-      items: [
-        { name: 'Laptops', cameraCount: 18, x: 20, y: 20, w: 30, h: 35, exp: 'N/A', barcode: '890456123789', isDamaged: false },
-        { name: 'Phones', cameraCount: 45, x: 55, y: 25, w: 28, h: 32, exp: 'N/A', barcode: '890987123456', isDamaged: false }
-      ],
-      hasAnomaly: false,
-      anomalyType: ''
-    }
-  });
-
-  // Central Safety Warning Alerts
-  const [alerts, setAlerts] = useState([
-    { id: 1, text: 'Operator missing safety helmet in Aisle A', severity: 'high', zone: 'Zone A', time: '10 mins ago' },
-    { id: 2, text: 'Blocked emergency exit near transit gate 2', severity: 'critical', zone: 'Loading Dock', time: '15 mins ago' }
-  ]);
+  // Centralized Warehouse Master State
+  const [warehouseInfo, setWarehouseInfo] = useState(null);
+  const [products, setProducts] = useState([]);
+  const [shelves, setShelves] = useState([]);
+  const [cameraData, setCameraData] = useState({});
+  const [discrepancies, setDiscrepancies] = useState([]);
+  const [alerts, setAlerts] = useState([]);
+  const [agvs, setAgvs] = useState([]);
+  const [demandHistory, setDemandHistory] = useState({});
 
   // Selected telemetry shelf
   const [selectedShelfId, setSelectedShelfId] = useState('A1');
 
-  // Active pathfinding coordinates for forklift
+  // Active pathfinding coordinates for route optimizer
   const [activeRoutePath, setActiveRoutePath] = useState([]);
+
+  // Load complete centralized state from REST API backend on mount
+  useEffect(() => {
+    const fetchCentralData = async () => {
+      try {
+        const [
+          whRes,
+          prodRes,
+          shelvesRes,
+          camerasRes,
+          discRes,
+          alertsRes,
+          agvsRes,
+          demandRes
+        ] = await Promise.all([
+          api.getWarehouseInfo(),
+          api.getProducts(),
+          api.getShelves(),
+          api.getCameras(),
+          api.getDiscrepancies(),
+          api.getAlerts(),
+          api.getAgvs(),
+          api.getDemandHistory()
+        ]);
+
+        setWarehouseInfo(whRes);
+        setProducts(prodRes);
+        setShelves(shelvesRes);
+        setCameraData(camerasRes);
+        setDiscrepancies(discRes);
+        setAlerts(alertsRes);
+        setAgvs(agvsRes);
+        setDemandHistory(demandRes);
+      } catch (err) {
+        console.error('Failed to load initial centralized warehouse state from REST backend:', err);
+      }
+    };
+    fetchCentralData();
+  }, []);
 
   // Callbacks
 
@@ -85,137 +88,77 @@ export default function App() {
   };
 
   // Sync DB to match Camera observations
-  const handleSyncDatabase = (mismatches) => {
-    setShelves(prev => {
-      return prev.map(shelf => {
-        const match = mismatches.find(m => m.shelfId === shelf.id);
-        if (match) {
-          const newQty = match.camCount;
-          let status = 'normal';
-          if (newQty === 0) status = 'empty';
-          else if (newQty / shelf.capacity < 0.2) status = 'low';
-          return {
-            ...shelf,
-            quantity: newQty,
-            status
-          };
-        }
-        return shelf;
-      });
-    });
-
-    // Clear anomalies on corresponding cameras
-    setCameraData(prev => {
-      const updated = { ...prev };
-      Object.keys(updated).forEach(camId => {
-        updated[camId] = {
-          ...updated[camId],
-          hasAnomaly: false,
-          anomalyType: ''
-        };
-      });
-      return updated;
-    });
+  const handleSyncDatabase = async (mismatches) => {
+    try {
+      const res = await api.syncDatabase(mismatches);
+      setShelves(res.shelves);
+      setCameraData(res.cameraData);
+      if (res.discrepancies) {
+        setDiscrepancies(res.discrepancies);
+      } else {
+        const updatedDisc = await api.getDiscrepancies();
+        setDiscrepancies(updatedDisc);
+      }
+    } catch (err) {
+      console.error('Failed to sync database:', err);
+    }
   };
 
   // Restock all low shelves to 90% capacity
-  const handleRestockAll = () => {
-    setShelves(prev => {
-      return prev.map(shelf => {
-        if (shelf.id === 'D1') return shelf; // Skip promo
-        const fillRate = shelf.quantity / shelf.capacity;
-        if (fillRate < 0.2) {
-          const restockedQty = Math.round(shelf.capacity * 0.9);
-          return {
-            ...shelf,
-            quantity: restockedQty,
-            status: 'normal'
-          };
-        }
-        return shelf;
-      });
-    });
-
-    // Sync camera views to match restocked state
-    setCameraData(prev => {
-      const updated = { ...prev };
-      updated['cam-01'] = {
-        ...updated['cam-01'],
-        items: updated['cam-01'].items.map(i =>
-          i.name === 'Milk' ? { ...i, cameraCount: 108 } : i // 90% of 120
-        ),
-        hasAnomaly: false
-      };
-      updated['cam-02'] = {
-        ...updated['cam-02'],
-        items: updated['cam-02'].items.map(i =>
-          i.name === 'Wheat' ? { ...i, cameraCount: 270 } : i // 90% of 300
-        ),
-        hasAnomaly: false
-      };
-      return updated;
-    });
+  const handleRestockAll = async () => {
+    try {
+      const res = await api.restockAll();
+      setShelves(res.shelves);
+      setCameraData(res.cameraData);
+    } catch (err) {
+      console.error('Failed to restock shelves:', err);
+    }
   };
 
   // Shift perishables near expiry to checkout promotion aisle
-  const handleTriggerPromotion = (fromShelfId, targetShelfId) => {
-    setShelves(prev => {
-      const updated = [...prev];
-      const fromShelf = updated.find(s => s.id === fromShelfId);
-      const targetShelf = updated.find(s => s.id === targetShelfId);
-
-      if (fromShelf && targetShelf) {
-        targetShelf.quantity = fromShelf.quantity;
-        targetShelf.item = fromShelf.item;
-        targetShelf.expiryDays = fromShelf.expiryDays;
-        targetShelf.status = 'normal';
-
-        fromShelf.quantity = 0;
-        fromShelf.status = 'empty';
-        fromShelf.expiryDays = 999;
-      }
-      return updated;
-    });
-
-    // Update camera counts to match promo layout relocation
-    setCameraData(prev => {
-      const updated = { ...prev };
-      // Empty milk camera bay
-      updated['cam-01'] = {
-        ...updated['cam-01'],
-        items: updated['cam-01'].items.filter(i => i.name !== 'Milk')
-      };
-      return updated;
-    });
+  const handleTriggerPromotion = async (fromShelfId, targetShelfId) => {
+    try {
+      const res = await api.triggerPromotion(fromShelfId, targetShelfId);
+      setShelves(res.shelves);
+      setCameraData(res.cameraData);
+    } catch (err) {
+      console.error('Failed to trigger promotion:', err);
+    }
   };
 
   // Add safety alert
-  const handleAddSafetyAlert = (alert) => {
-    setAlerts(prev => [
-      ...prev,
-      {
-        id: Date.now(),
-        text: alert.text,
-        severity: alert.severity,
-        zone: alert.zone,
-        time: 'Just now'
-      }
-    ]);
+  const handleAddSafetyAlert = async (alert) => {
+    try {
+      const newAlert = await api.addAlert(alert);
+      setAlerts(prev => [...prev, newAlert]);
+    } catch (err) {
+      console.error('Failed to add safety alert:', err);
+    }
   };
 
   // Resolve safety alerts
-  const handleResolveAlert = (alertId) => {
-    setAlerts(prev => prev.filter(a => a.id !== alertId));
+  const handleResolveAlert = async (alertId) => {
+    try {
+      const res = await api.resolveAlert(alertId);
+      setAlerts(res.alerts);
+    } catch (err) {
+      console.error('Failed to resolve safety alert:', err);
+    }
   };
 
   // Copilot execute resolution button dispatcher
-  const handleExecuteCopilotAction = (actionType) => {
+  const handleExecuteCopilotAction = async (actionType) => {
     if (actionType === 'restock_all') {
-      handleRestockAll();
+      await handleRestockAll();
     } else if (actionType === 'promo_move') {
-      handleTriggerPromotion('A1', 'D1');
+      await handleTriggerPromotion('A1', 'D1');
     } else if (actionType === 'clear_safety') {
-      setAlerts([]);
+      try {
+        const res = await api.clearAlerts();
+        setAlerts(res.alerts);
+      } catch (err) {
+        console.error('Failed to clear safety alerts:', err);
+      }
     }
   };
 
@@ -231,7 +174,9 @@ export default function App() {
             </div>
             <div>
               <h1 className="text-sm font-black tracking-wide uppercase text-[#2a3723]">LOGIS-TWIN</h1>
-              <span className="text-[10px] text-[#2a3723]/60 font-mono">SUPPLY CHAIN AI</span>
+              <span className="text-[10px] text-[#2a3723]/60 font-mono">
+                {warehouseInfo?.warehouse?.name || 'SUPPLY CHAIN AI'}
+              </span>
             </div>
           </div>
 
@@ -339,9 +284,9 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-4 text-xs font-mono text-[#2a3723]/70">
-            <div>GATEWAY: <span className="text-emerald-700 font-bold">ONLINE</span></div>
+            <div>FACILITY: <span className="text-emerald-700 font-bold">{warehouseInfo?.warehouse?.warehouseId || 'WH-BLR-01'}</span></div>
             <div>•</div>
-            <div>EDGE-NODES: <span className="text-[#2a3723] font-bold">14 ACTIVE</span></div>
+            <div>AGV FLEET: <span className="text-[#2a3723] font-bold">{agvs.length} ACTIVE</span></div>
           </div>
         </header>
 
@@ -354,6 +299,7 @@ export default function App() {
               <div className="lg:col-span-3 h-full">
                 <DigitalTwin3D 
                   shelves={shelves} 
+                  agvs={agvs}
                   activeRoutePath={activeRoutePath} 
                   onSelectShelf={handleSelectShelf}
                   selectedShelfId={selectedShelfId}
@@ -363,10 +309,12 @@ export default function App() {
                 <InventorySync 
                   shelves={shelves} 
                   cameraData={cameraData} 
+                  discrepancies={discrepancies}
                   onSyncDatabase={handleSyncDatabase} 
                 />
                 <RouteOptimizer 
                   shelves={shelves} 
+                  agvs={agvs}
                   onSetRoutePath={setActiveRoutePath} 
                 />
               </div>
@@ -377,15 +325,17 @@ export default function App() {
           {activeTab === 'forecasts' && (
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-stretch">
               <div className="lg:col-span-3 h-full">
-                <DemandForecast />
+                <DemandForecast demandHistory={demandHistory} products={products} />
               </div>
               <div className="lg:col-span-2 flex flex-col gap-8 h-full">
                 <OccupancyPredictor 
                   shelves={shelves} 
+                  zones={warehouseInfo?.zones}
                   onRestockAll={handleRestockAll} 
                 />
                 <ExpiryIntel 
                   shelves={shelves} 
+                  products={products}
                   onTriggerPromotion={handleTriggerPromotion} 
                 />
               </div>
@@ -399,6 +349,7 @@ export default function App() {
                 <VisionEngine 
                   cameraData={cameraData} 
                   setCameraData={setCameraData} 
+                  discrepancies={discrepancies}
                   onAddSafetyAlert={handleAddSafetyAlert} 
                 />
               </div>
@@ -427,9 +378,12 @@ export default function App() {
           {activeTab === 'report' && (
             <div className="max-w-4xl mx-auto h-full">
               <ReportGenerator 
+                warehouseInfo={warehouseInfo}
                 shelves={shelves} 
                 alerts={alerts} 
                 cameraData={cameraData} 
+                discrepancies={discrepancies}
+                agvs={agvs}
               />
             </div>
           )}
