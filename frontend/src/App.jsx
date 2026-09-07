@@ -20,10 +20,19 @@ import RouteOptimizer from './components/RouteOptimizer';
 import SafetyMonitor from './components/SafetyMonitor';
 import CopilotChat from './components/CopilotChat';
 import ReportGenerator from './components/ReportGenerator';
+import LandingPage from './components/LandingPage';
+import OrgShell from './components/OrgShell';
 import { api } from './services/api';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('twin'); // twin, forecasts, vision, copilot, report
+  // Top-level View Router: 'landing' (default) or 'org'
+  const [viewMode, setViewMode] = useState('landing');
+  
+  // Organization Workspace Tab: 'wms' (Operations Dashboard), 'growth', 'vendor', 'platform'
+  const [currentOrgTab, setCurrentOrgTab] = useState('wms');
+
+  // WMS Dashboard Active Tab: 'twin', 'forecasts', 'vision', 'copilot', 'report'
+  const [activeTab, setActiveTab] = useState('twin');
 
   // Centralized Warehouse Master State
   const [warehouseInfo, setWarehouseInfo] = useState(null);
@@ -84,7 +93,20 @@ export default function App() {
     fetchCentralData();
   }, []);
 
-  // Callbacks
+  // Handler from Landing Page to launch organization workspace
+  const handleExplorePlatform = (targetTab = 'twin') => {
+    setViewMode('org');
+    if (targetTab === 'growth') {
+      setCurrentOrgTab('growth');
+    } else {
+      setCurrentOrgTab('wms');
+      setActiveTab(targetTab);
+    }
+  };
+
+  const handleNavigateLanding = () => {
+    setViewMode('landing');
+  };
 
   // Select shelf
   const handleSelectShelf = (shelfId) => {
@@ -174,233 +196,250 @@ export default function App() {
     }
   };
 
+  // Render Public Landing Page
+  if (viewMode === 'landing') {
+    return (
+      <LandingPage
+        onExplorePlatform={handleExplorePlatform}
+        onNavigateOrgTab={(tab) => {
+          setViewMode('org');
+          setCurrentOrgTab(tab);
+        }}
+      />
+    );
+  }
+
+  // Render Organization SaaS Shell (Alpha Retail Group Demo Tenant)
   return (
-    <div className="flex h-screen w-screen bg-[#e8e5dd] overflow-hidden text-[#2a3723] font-sans print:h-auto print:overflow-visible">
-      {/* Sidebar Navigation */}
-      <aside className="w-64 bg-[#dcd9cf] border-r border-[#b9bba8] flex flex-col justify-between py-6 shrink-0 print:hidden">
-        <div>
-          {/* Logo Brand */}
-          <div className="px-6 flex items-center gap-3 mb-8">
-            <div className="w-9 h-9 rounded-xl bg-[#2a3723] flex items-center justify-center border border-[#b9bba8]/30 shadow-md">
-              <Activity className="w-5 h-5 text-[#e8e5dd] animate-pulse" />
+    <OrgShell
+      currentOrgTab={currentOrgTab}
+      setCurrentOrgTab={setCurrentOrgTab}
+      onNavigateLanding={handleNavigateLanding}
+    >
+      <div className="flex h-[#calc(100vh-3.5rem)] w-full bg-[#e8e5dd] overflow-hidden text-[#2a3723] font-sans print:h-auto print:overflow-visible">
+        {/* Sidebar Navigation */}
+        <aside className="w-64 bg-[#dcd9cf] border-r border-[#b9bba8] flex flex-col justify-between py-6 shrink-0 print:hidden">
+          <div>
+            {/* Logo Brand & Organization Context */}
+            <div className="px-6 flex items-center gap-3 mb-8">
+              <div className="w-9 h-9 rounded-xl bg-[#2a3723] flex items-center justify-center border border-[#b9bba8]/30 shadow-md">
+                <Activity className="w-5 h-5 text-[#e8e5dd] animate-pulse" />
+              </div>
+              <div>
+                <h1 className="text-xs font-black tracking-wide uppercase text-[#2a3723]">ALPHA RETAIL GROUP</h1>
+                <span className="text-[9px] text-emerald-800 font-mono font-bold">
+                  {warehouseInfo?.warehouse?.name || 'CENTRAL FULFILLMENT'}
+                </span>
+              </div>
             </div>
-            <div>
-              <h1 className="text-sm font-black tracking-wide uppercase text-[#2a3723]">LOGIS-TWIN</h1>
-              <span className="text-[10px] text-[#2a3723]/60 font-mono">
-                {warehouseInfo?.warehouse?.name || 'SUPPLY CHAIN AI'}
-              </span>
-            </div>
+
+            {/* Navigation Links */}
+            <nav className="px-3 space-y-1.5">
+              <button
+                onClick={() => setActiveTab('twin')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  activeTab === 'twin'
+                    ? 'bg-[#2a3723]/10 border-l-4 border-[#2a3723] text-[#2a3723] font-extrabold'
+                    : 'text-[#2a3723]/60 hover:bg-[#2a3723]/5 hover:text-[#2a3723]'
+                }`}
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                <span>3D Digital Twin</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('forecasts')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  activeTab === 'forecasts'
+                    ? 'bg-[#2a3723]/10 border-l-4 border-[#2a3723] text-[#2a3723] font-extrabold'
+                    : 'text-[#2a3723]/60 hover:bg-[#2a3723]/5 hover:text-[#2a3723]'
+                }`}
+              >
+                <TrendingUp className="w-4 h-4" />
+                <span>Demand Forecasts</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('vision')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  activeTab === 'vision'
+                    ? 'bg-[#2a3723]/10 border-l-4 border-[#2a3723] text-[#2a3723] font-extrabold'
+                    : 'text-[#2a3723]/60 hover:bg-[#2a3723]/5 hover:text-[#2a3723]'
+                }`}
+              >
+                <Camera className="w-4 h-4" />
+                <span>Vision & Safety</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('copilot')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  activeTab === 'copilot'
+                    ? 'bg-[#2a3723]/10 border-l-4 border-[#2a3723] text-[#2a3723] font-extrabold'
+                    : 'text-[#2a3723]/60 hover:bg-[#2a3723]/5 hover:text-[#2a3723]'
+                }`}
+              >
+                <Bot className="w-4 h-4 animate-bounce" style={{ animationDuration: '4s' }} />
+                <span className="flex items-center gap-1.5">
+                  AI Copilot
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#2a3723] animate-ping"></span>
+                </span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('report')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  activeTab === 'report'
+                    ? 'bg-[#2a3723]/10 border-l-4 border-[#2a3723] text-[#2a3723] font-extrabold'
+                    : 'text-[#2a3723]/60 hover:bg-[#2a3723]/5 hover:text-[#2a3723]'
+                }`}
+              >
+                <FileText className="w-4 h-4" />
+                <span>Executive Audits</span>
+              </button>
+            </nav>
           </div>
 
-          {/* Navigation Links */}
-          <nav className="px-3 space-y-1.5">
-            <button
-              onClick={() => setActiveTab('twin')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'twin'
-                  ? 'bg-[#2a3723]/10 border-l-4 border-[#2a3723] text-[#2a3723] font-extrabold'
-                  : 'text-[#2a3723]/60 hover:bg-[#2a3723]/5 hover:text-[#2a3723]'
-              }`}
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              <span>3D Digital Twin</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('forecasts')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'forecasts'
-                  ? 'bg-[#2a3723]/10 border-l-4 border-[#2a3723] text-[#2a3723] font-extrabold'
-                  : 'text-[#2a3723]/60 hover:bg-[#2a3723]/5 hover:text-[#2a3723]'
-              }`}
-            >
-              <TrendingUp className="w-4 h-4" />
-              <span>Demand Forecasts</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('vision')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'vision'
-                  ? 'bg-[#2a3723]/10 border-l-4 border-[#2a3723] text-[#2a3723] font-extrabold'
-                  : 'text-[#2a3723]/60 hover:bg-[#2a3723]/5 hover:text-[#2a3723]'
-              }`}
-            >
-              <Camera className="w-4 h-4" />
-              <span>Vision & Safety</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('copilot')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'copilot'
-                  ? 'bg-[#2a3723]/10 border-l-4 border-[#2a3723] text-[#2a3723] font-extrabold'
-                  : 'text-[#2a3723]/60 hover:bg-[#2a3723]/5 hover:text-[#2a3723]'
-              }`}
-            >
-              <Bot className="w-4 h-4 animate-bounce" style={{ animationDuration: '4s' }} />
-              <span className="flex items-center gap-1.5">
-                AI Copilot
-                <span className="w-1.5 h-1.5 rounded-full bg-[#2a3723] animate-ping"></span>
-              </span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('report')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'report'
-                  ? 'bg-[#2a3723]/10 border-l-4 border-[#2a3723] text-[#2a3723] font-extrabold'
-                  : 'text-[#2a3723]/60 hover:bg-[#2a3723]/5 hover:text-[#2a3723]'
-              }`}
-            >
-              <FileText className="w-4 h-4" />
-              <span>Executive Audits</span>
-            </button>
-          </nav>
-        </div>
-
-        {/* System telemetry brief */}
-        <div className="px-6 border-t border-[#b9bba8]/80 pt-6">
-          <div className="bg-[#e8e5dd]/50 p-3.5 rounded-xl border border-[#b9bba8]/50 space-y-2">
-            <div className="flex justify-between items-center text-[10px] text-[#2a3723]/60 font-mono">
-              <span>DB SYNC STATUS</span>
-              <span className="text-emerald-700 flex items-center gap-1 font-bold">
-                <span className="w-1.5 h-1.5 bg-emerald-600 rounded-full"></span>
-                ACTIVE
-              </span>
-            </div>
-            <div className="flex justify-between items-center text-[10px] text-[#2a3723]/60 font-mono">
-              <span>ACTIVE HAZARDS</span>
-              <span className={alerts.length > 0 ? 'text-rose-700 font-extrabold' : 'text-[#2a3723]/40'}>
-                {alerts.length} Warnings
-              </span>
+          {/* System telemetry brief */}
+          <div className="px-6 border-t border-[#b9bba8]/80 pt-6">
+            <div className="bg-[#e8e5dd]/50 p-3.5 rounded-xl border border-[#b9bba8]/50 space-y-2">
+              <div className="flex justify-between items-center text-[10px] text-[#2a3723]/60 font-mono">
+                <span>DEMO ENVIRONMENT</span>
+                <span className="text-emerald-700 font-bold">ACTIVE</span>
+              </div>
+              <div className="flex justify-between items-center text-[10px] text-[#2a3723]/60 font-mono">
+                <span>ACTIVE HAZARDS</span>
+                <span className={alerts.length > 0 ? 'text-rose-700 font-extrabold' : 'text-[#2a3723]/40'}>
+                  {alerts.length} Warnings
+                </span>
+              </div>
             </div>
           </div>
-        </div>
-      </aside>
+        </aside>
 
-      {/* Main Panel Viewport */}
-      <main className="flex-1 flex flex-col h-full bg-[#e8e5dd] overflow-y-auto print:h-auto print:overflow-visible">
-        
-        {/* Header (Top Nav) */}
-        <header className="h-16 border-b border-[#b9bba8]/80 px-8 flex items-center justify-between shrink-0 print:hidden">
-          <div className="flex items-center gap-2">
-            <Menu className="w-5 h-5 text-[#2a3723]/70 cursor-pointer hover:text-[#2a3723] md:hidden" />
-            <h2 className="text-sm font-bold text-[#2a3723] flex items-center gap-1.5 uppercase font-sans">
-              {activeTab === 'twin' && 'Spatial Digital Twin Workspace'}
-              {activeTab === 'forecasts' && 'Predictive Analytics Dashboard'}
-              {activeTab === 'vision' && 'Camera Feeds & Safety Portal'}
-              {activeTab === 'copilot' && 'AI Supply Chain Copilot Engine'}
-              {activeTab === 'report' && 'Automated Warehouse Reports'}
-            </h2>
-          </div>
-
-          <div className="flex items-center gap-4 text-xs font-mono text-[#2a3723]/70">
-            <div>FACILITY: <span className="text-emerald-700 font-bold">{warehouseInfo?.warehouse?.warehouseId || 'WH-BLR-01'}</span></div>
-            <div>•</div>
-            <div>AGV FLEET: <span className="text-[#2a3723] font-bold">{agvs.length} ACTIVE</span></div>
-          </div>
-        </header>
-
-        {/* Scrollable Dashboard content */}
-        <div className="flex-1 p-8 print:p-0">
+        {/* Main Panel Viewport */}
+        <main className="flex-1 flex flex-col h-full bg-[#e8e5dd] overflow-y-auto print:h-auto print:overflow-visible">
           
-          {/* 3D DIGITAL TWIN VIEWPORT */}
-          {activeTab === 'twin' && (
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-stretch">
-              <div className="lg:col-span-3 h-full">
-                <DigitalTwin3D 
+          {/* Header (Top Nav) */}
+          <header className="h-16 border-b border-[#b9bba8]/80 px-8 flex items-center justify-between shrink-0 print:hidden">
+            <div className="flex items-center gap-2">
+              <Menu className="w-5 h-5 text-[#2a3723]/70 cursor-pointer hover:text-[#2a3723] md:hidden" />
+              <h2 className="text-sm font-bold text-[#2a3723] flex items-center gap-1.5 uppercase font-sans">
+                {activeTab === 'twin' && 'Spatial Digital Twin Workspace'}
+                {activeTab === 'forecasts' && 'Predictive Analytics Dashboard'}
+                {activeTab === 'vision' && 'Camera Feeds & Safety Portal'}
+                {activeTab === 'copilot' && 'AI Supply Chain Copilot Engine'}
+                {activeTab === 'report' && 'Automated Warehouse Reports'}
+              </h2>
+            </div>
+
+            <div className="flex items-center gap-4 text-xs font-mono text-[#2a3723]/70">
+              <div>ORG: <span className="text-[#2a3723] font-bold">ALPHA RETAIL GROUP</span></div>
+              <div>•</div>
+              <div>FACILITY: <span className="text-emerald-700 font-bold">{warehouseInfo?.warehouse?.warehouseId || 'WH-BLR-01'}</span></div>
+            </div>
+          </header>
+
+          {/* Scrollable Dashboard content */}
+          <div className="flex-1 p-8 print:p-0">
+            
+            {/* 3D DIGITAL TWIN VIEWPORT */}
+            {activeTab === 'twin' && (
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-stretch">
+                <div className="lg:col-span-3 h-full">
+                  <DigitalTwin3D 
+                    shelves={shelves} 
+                    agvs={agvs}
+                    activeRoutePath={activeRoutePath} 
+                    onSelectShelf={handleSelectShelf}
+                    selectedShelfId={selectedShelfId}
+                  />
+                </div>
+                <div className="lg:col-span-2 flex flex-col gap-8 h-full">
+                  <InventorySync 
+                    shelves={shelves} 
+                    cameraData={cameraData} 
+                    discrepancies={discrepancies}
+                    onSyncDatabase={handleSyncDatabase} 
+                  />
+                  <RouteOptimizer 
+                    shelves={shelves} 
+                    agvs={agvs}
+                    onSetRoutePath={setActiveRoutePath} 
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* FORECASTS VIEWPORT */}
+            {activeTab === 'forecasts' && (
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-stretch">
+                <div className="lg:col-span-3 h-full">
+                  <DemandForecast demandHistory={demandHistory} products={products} />
+                </div>
+                <div className="lg:col-span-2 flex flex-col gap-8 h-full">
+                  <OccupancyPredictor 
+                    shelves={shelves} 
+                    zones={warehouseInfo?.zones}
+                    onRestockAll={handleRestockAll} 
+                  />
+                  <ExpiryIntel 
+                    shelves={shelves} 
+                    products={products}
+                    onTriggerPromotion={handleTriggerPromotion} 
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* VISION & SAFETY VIEWPORT */}
+            {activeTab === 'vision' && (
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-stretch">
+                <div className="lg:col-span-3 h-full">
+                  <VisionEngine 
+                    cameraData={cameraData} 
+                    setCameraData={setCameraData} 
+                    onAddSafetyAlert={handleAddSafetyAlert}
+                    onVisionDetection={handleVisionDetection}
+                  />
+                </div>
+                <div className="lg:col-span-2 h-full">
+                  <SafetyMonitor 
+                    alerts={alerts} 
+                    onResolveAlert={handleResolveAlert} 
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* COPILOT VIEWPORT */}
+            {activeTab === 'copilot' && (
+              <div className="max-w-4xl mx-auto h-full">
+                <CopilotChat 
                   shelves={shelves} 
-                  agvs={agvs}
-                  activeRoutePath={activeRoutePath} 
-                  onSelectShelf={handleSelectShelf}
-                  selectedShelfId={selectedShelfId}
+                  cameraData={cameraData} 
+                  alerts={alerts}
+                  onExecuteAction={handleExecuteCopilotAction}
                 />
               </div>
-              <div className="lg:col-span-2 flex flex-col gap-8 h-full">
-                <InventorySync 
+            )}
+
+            {/* REPORT VIEWPORT */}
+            {activeTab === 'report' && (
+              <div className="max-w-4xl mx-auto h-full">
+                <ReportGenerator 
+                  warehouseInfo={warehouseInfo}
                   shelves={shelves} 
+                  alerts={alerts} 
                   cameraData={cameraData} 
                   discrepancies={discrepancies}
-                  onSyncDatabase={handleSyncDatabase} 
-                />
-                <RouteOptimizer 
-                  shelves={shelves} 
                   agvs={agvs}
-                  onSetRoutePath={setActiveRoutePath} 
                 />
               </div>
-            </div>
-          )}
-
-          {/* FORECASTS VIEWPORT */}
-          {activeTab === 'forecasts' && (
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-stretch">
-              <div className="lg:col-span-3 h-full">
-                <DemandForecast demandHistory={demandHistory} products={products} />
-              </div>
-              <div className="lg:col-span-2 flex flex-col gap-8 h-full">
-                <OccupancyPredictor 
-                  shelves={shelves} 
-                  zones={warehouseInfo?.zones}
-                  onRestockAll={handleRestockAll} 
-                />
-                <ExpiryIntel 
-                  shelves={shelves} 
-                  products={products}
-                  onTriggerPromotion={handleTriggerPromotion} 
-                />
-              </div>
-            </div>
-          )}
-
-          {/* VISION & SAFETY VIEWPORT */}
-          {activeTab === 'vision' && (
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-stretch">
-              <div className="lg:col-span-3 h-full">
-                <VisionEngine 
-                  cameraData={cameraData} 
-                  setCameraData={setCameraData} 
-                  onAddSafetyAlert={handleAddSafetyAlert}
-                  onVisionDetection={handleVisionDetection}
-                />
-              </div>
-              <div className="lg:col-span-2 h-full">
-                <SafetyMonitor 
-                  alerts={alerts} 
-                  onResolveAlert={handleResolveAlert} 
-                />
-              </div>
-            </div>
-          )}
-
-          {/* COPILOT VIEWPORT */}
-          {activeTab === 'copilot' && (
-            <div className="max-w-4xl mx-auto h-full">
-              <CopilotChat 
-                shelves={shelves} 
-                cameraData={cameraData} 
-                alerts={alerts}
-                onExecuteAction={handleExecuteCopilotAction}
-              />
-            </div>
-          )}
-
-          {/* REPORT VIEWPORT */}
-          {activeTab === 'report' && (
-            <div className="max-w-4xl mx-auto h-full">
-              <ReportGenerator 
-                warehouseInfo={warehouseInfo}
-                shelves={shelves} 
-                alerts={alerts} 
-                cameraData={cameraData} 
-                discrepancies={discrepancies}
-                agvs={agvs}
-              />
-            </div>
-          )}
-        </div>
-      </main>
-    </div>
+            )}
+          </div>
+        </main>
+      </div>
+    </OrgShell>
   );
 }
