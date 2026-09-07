@@ -7,7 +7,6 @@ import {
   products,
   shelves,
   cameraData,
-  discrepancies,
   detectionHistory,
   alerts,
   agvs,
@@ -163,7 +162,7 @@ app.post('/api/tasks/:id/approve', (req, res) => {
 // POST /api/tasks/:id/reject - Human Rejection Gate (PENDING -> REJECTED)
 app.post('/api/tasks/:id/reject', (req, res) => {
   try {
-    const { reason } = req.body;
+    const { reason = '' } = req.body || {};
     const updatedTask = rejectTaskById(req.params.id, reason);
     res.json(updatedTask);
   } catch (err) {
@@ -200,7 +199,7 @@ app.post('/api/tasks/:id/execute', (req, res) => {
 // POST /api/tasks/:id/cancel - Cancel task
 app.post('/api/tasks/:id/cancel', (req, res) => {
   try {
-    const { reason } = req.body;
+    const { reason = '' } = req.body || {};
     const updatedTask = cancelTaskById(req.params.id, reason);
     res.json(updatedTask);
   } catch (err) {
@@ -210,7 +209,7 @@ app.post('/api/tasks/:id/cancel', (req, res) => {
 
 // POST /api/vision/detections - Computer Vision Processing Pipeline Endpoint
 app.post('/api/vision/detections', (req, res) => {
-  const { cameraId, items = [], hasAnomaly = false, anomalyType = '' } = req.body;
+  const { cameraId, items = [], hasAnomaly = false, anomalyType = '' } = req.body || {};
   if (!cameraId) {
     return res.status(400).json({ error: 'cameraId parameter is required' });
   }
@@ -225,7 +224,7 @@ app.get('/api/vision/history', (req, res) => {
 
 // POST /api/shelves/sync-db - Inventory DB Sync via Discrepancy IDs or Mismatches
 app.post('/api/shelves/sync-db', (req, res) => {
-  const { mismatches = [], discrepancyIds = [] } = req.body;
+  const { mismatches = [], discrepancyIds = [] } = req.body || {};
   const result = syncDatabaseState(mismatches, discrepancyIds);
   res.json(result);
 });
@@ -238,7 +237,7 @@ app.post('/api/shelves/restock-all', (req, res) => {
 
 // POST /api/shelves/promotion
 app.post('/api/shelves/promotion', (req, res) => {
-  const { fromShelfId = 'A1', targetShelfId = 'D1' } = req.body;
+  const { fromShelfId = 'A1', targetShelfId = 'D1' } = req.body || {};
   const result = triggerPromotionState(fromShelfId, targetShelfId);
   res.json(result);
 });
@@ -254,7 +253,7 @@ app.put('/api/cameras/:id', (req, res) => {
   if (!cameraData[id]) {
     return res.status(404).json({ error: 'Camera stream not found' });
   }
-  cameraData[id] = { ...cameraData[id], ...req.body };
+  cameraData[id] = { ...cameraData[id], ...(req.body || {}) };
   res.json(cameraData[id]);
 });
 
@@ -271,7 +270,7 @@ app.get('/api/alerts', (req, res) => {
 
 // POST /api/alerts - Create safety alert
 app.post('/api/alerts', (req, res) => {
-  const newAlert = addSafetyAlertState(req.body);
+  const newAlert = addSafetyAlertState(req.body || {});
   res.status(201).json(newAlert);
 });
 
@@ -478,6 +477,6 @@ Return a JSON object strictly matching this schema:
   return res.json(aiResponse);
 });
 
-app.listen(PORT, () => {
-  console.log(`[WMS-Server] Backend REST API server running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`[WMS-Server] Backend REST API server running on http://127.0.0.1:${PORT}`);
 });

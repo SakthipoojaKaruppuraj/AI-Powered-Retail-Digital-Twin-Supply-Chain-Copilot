@@ -762,7 +762,7 @@ export function restockAllShelvesState() {
   shelves = shelves.map(shelf => {
     if (shelf.id === 'D1') return shelf;
     const fillRate = shelf.quantity / shelf.capacity;
-    if (fillRate < 0.2) {
+    if (fillRate < 0.5) {
       const restockedQty = Math.round(shelf.capacity * 0.9);
       return { ...shelf, quantity: restockedQty, status: 'normal' };
     }
@@ -802,6 +802,7 @@ export function triggerPromotionState(fromShelfId = 'A1', targetShelfId = 'D1') 
   const targetShelf = shelves.find(s => s.id === targetShelfId || s.shelfId === targetShelfId);
 
   if (fromShelf && targetShelf) {
+    const movedItemName = fromShelf.item;
     targetShelf.quantity = fromShelf.quantity;
     targetShelf.item = fromShelf.item;
     targetShelf.productId = fromShelf.productId;
@@ -811,13 +812,14 @@ export function triggerPromotionState(fromShelfId = 'A1', targetShelfId = 'D1') 
     fromShelf.quantity = 0;
     fromShelf.status = 'empty';
     fromShelf.expiryDays = 999;
-  }
 
-  if (cameraData['cam-01']) {
-    cameraData['cam-01'] = {
-      ...cameraData['cam-01'],
-      items: cameraData['cam-01'].items.filter(i => i.name !== 'Milk')
-    };
+    Object.keys(cameraData).forEach(camId => {
+      if (cameraData[camId] && cameraData[camId].items) {
+        cameraData[camId].items = cameraData[camId].items.filter(i =>
+          !(i.shelfId === fromShelf.id || (movedItemName && i.name.toLowerCase() === movedItemName.toLowerCase()))
+        );
+      }
+    });
   }
 
   return {
@@ -850,7 +852,7 @@ export function addSafetyAlertState(alertData) {
  * Resolve Safety Alert by ID
  */
 export function resolveSafetyAlertState(alertId) {
-  alerts = alerts.filter(a => a.id !== Number(alertId));
+  alerts = alerts.filter(a => String(a.id) !== String(alertId));
   return alerts;
 }
 

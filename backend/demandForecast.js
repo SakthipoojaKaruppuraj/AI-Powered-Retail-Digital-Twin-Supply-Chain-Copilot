@@ -72,11 +72,13 @@ export function calculateDemandForecast(productFilter = null, modifiers = {}) {
 
     // 3. Weighted Moving Average Base Daily Forecast
     let weightedSum = 0;
+    let actualWeightsSum = 0;
     salesHistory.forEach((val, i) => {
       const w = weights[i] !== undefined ? weights[i] : 1.0;
       weightedSum += val * w;
+      actualWeightsSum += w;
     });
-    const baseWeightedDailyForecast = weightedSum / weightsSum;
+    const baseWeightedDailyForecast = actualWeightsSum > 0 ? (weightedSum / actualWeightsSum) : 0;
 
     // 4. Apply Deterministic Modifiers
     let multiplier = 1.0;

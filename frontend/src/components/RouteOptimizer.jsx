@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Route, Zap, Compass, RefreshCw, Layers, CheckCircle, Play, ShieldAlert, AlertTriangle } from 'lucide-react';
+import { Route, CheckCircle, Play } from 'lucide-react';
 import { api } from '../services/api';
 
 export default function RouteOptimizer({ onSetRoutePath, shelves }) {
@@ -194,7 +194,7 @@ export default function RouteOptimizer({ onSetRoutePath, shelves }) {
         reason: rec.reason
       });
 
-      const approved = await api.approveTask(created.taskId);
+      await api.approveTask(created.taskId);
       const assigned = await api.assignTask(created.taskId);
 
       setActionMessage({ type: 'success', text: `Task ${created.taskId} created, approved & assigned to ${assigned.assignedAgvId || 'AGV'}!` });

@@ -1,9 +1,7 @@
 import {
   shelves,
   agvs,
-  alerts,
-  getEnrichedShelves,
-  findProductByBarcodeOrSkuOrName
+  getEnrichedShelves
 } from './warehouseStore.js';
 import { calculateDemandForecast } from './demandForecast.js';
 import { calculateExpiryIntelligence } from './expiryIntelligence.js';
@@ -144,9 +142,9 @@ export function createTask(taskData) {
     executionGranularity: taskData.executionGranularity || 'SHELF_PRODUCT',
     productId: taskData.productId || 'PRD-GENERIC',
     productName: taskData.productName || 'Generic Product',
-    sourceShelfId: taskData.sourceShelfId || null,
+    sourceShelfId: taskData.sourceShelfId || taskData.sourceShelf || taskData.shelfId || null,
     sourceZone: taskData.sourceZone || null,
-    targetShelfId: taskData.targetShelfId || null,
+    targetShelfId: taskData.targetShelfId || taskData.targetShelf || null,
     targetZone: taskData.targetZone || null,
     quantity: taskData.quantity !== undefined ? Number(taskData.quantity) : 0,
     reason: taskData.reason || 'Operational workflow execution',

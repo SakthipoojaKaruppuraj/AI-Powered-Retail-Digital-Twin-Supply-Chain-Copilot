@@ -4,7 +4,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite frontend",
+    "dev": "node scripts/dev.js",
+    "dev:frontend": "vite frontend",
     "server": "node backend/server.js",
     "build": "vite build frontend",
     "lint": "oxlint",
