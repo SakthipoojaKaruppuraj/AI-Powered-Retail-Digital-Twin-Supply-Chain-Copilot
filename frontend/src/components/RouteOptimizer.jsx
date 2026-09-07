@@ -215,7 +215,7 @@ export default function RouteOptimizer({ onSetRoutePath, shelves }) {
   };
 
   return (
-    <div className="glass-panel p-6 rounded-2xl flex flex-col h-full">
+    <div className="glass-panel p-6 rounded-2xl flex flex-col">
       {/* Header */}
       <div className="flex justify-between items-start mb-4">
         <div>

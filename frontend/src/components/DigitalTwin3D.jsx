@@ -370,7 +370,7 @@ export default function DigitalTwin3D({ shelves, activeRoutePath, onSelectShelf,
   const hoveredShelfObj = shelves.find(s => s.id === hoveredShelf);
 
   return (
-    <div className="glass-panel p-6 rounded-2xl flex flex-col h-full relative overflow-hidden">
+    <div className="glass-panel p-6 rounded-2xl flex flex-col relative">
       {/* HUD Info */}
       <div className="flex justify-between items-start mb-4 z-10">
         <div>
@@ -392,7 +392,7 @@ export default function DigitalTwin3D({ shelves, activeRoutePath, onSelectShelf,
       {/* Render Canvas Container */}
       <div 
         ref={mountRef} 
-        className="flex-1 w-full min-h-[320px] rounded-xl border border-[#b9bba8] relative cursor-grab active:cursor-grabbing overflow-hidden"
+        className="w-full h-[400px] min-h-[350px] rounded-xl border border-[#b9bba8] relative cursor-grab active:cursor-grabbing overflow-hidden"
       >
         {/* Instruction badge */}
         <div className="absolute bottom-3 right-3 bg-[#e8e5dd]/80 backdrop-blur-md px-2.5 py-1.5 rounded-lg border border-[#b9bba8]/40 text-[10px] text-[#2a3723] flex items-center gap-1.5 pointer-events-none select-none">

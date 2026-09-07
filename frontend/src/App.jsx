@@ -216,7 +216,7 @@ export default function App() {
       setCurrentOrgTab={setCurrentOrgTab}
       onNavigateLanding={handleNavigateLanding}
     >
-      <div className="flex h-[#calc(100vh-3.5rem)] w-full bg-[#e8e5dd] overflow-hidden text-[#2a3723] font-sans print:h-auto print:overflow-visible">
+      <div className="flex h-[calc(100vh-3.5rem)] w-full bg-[#e8e5dd] overflow-hidden text-[#2a3723] font-sans print:h-auto print:overflow-visible">
         {/* Sidebar Navigation */}
         <aside className="w-64 bg-[#dcd9cf] border-r border-[#b9bba8] flex flex-col justify-between py-6 shrink-0 print:hidden">
           <div>
@@ -345,8 +345,8 @@ export default function App() {
             
             {/* 3D DIGITAL TWIN VIEWPORT */}
             {activeTab === 'twin' && (
-              <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-stretch">
-                <div className="lg:col-span-3 h-full">
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
+                <div className="lg:col-span-3 flex flex-col gap-6">
                   <DigitalTwin3D 
                     shelves={shelves} 
                     agvs={agvs}
@@ -355,7 +355,7 @@ export default function App() {
                     selectedShelfId={selectedShelfId}
                   />
                 </div>
-                <div className="lg:col-span-2 flex flex-col gap-8 h-full">
+                <div className="lg:col-span-2 flex flex-col gap-6">
                   <InventorySync 
                     shelves={shelves} 
                     cameraData={cameraData} 
@@ -373,11 +373,11 @@ export default function App() {
 
             {/* FORECASTS VIEWPORT */}
             {activeTab === 'forecasts' && (
-              <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-stretch">
-                <div className="lg:col-span-3 h-full">
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
+                <div className="lg:col-span-3 flex flex-col gap-6">
                   <DemandForecast demandHistory={demandHistory} products={products} />
                 </div>
-                <div className="lg:col-span-2 flex flex-col gap-8 h-full">
+                <div className="lg:col-span-2 flex flex-col gap-6">
                   <OccupancyPredictor 
                     shelves={shelves} 
                     zones={warehouseInfo?.zones}
@@ -394,8 +394,8 @@ export default function App() {
 
             {/* VISION & SAFETY VIEWPORT */}
             {activeTab === 'vision' && (
-              <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-stretch">
-                <div className="lg:col-span-3 h-full">
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
+                <div className="lg:col-span-3 flex flex-col gap-6">
                   <VisionEngine 
                     cameraData={cameraData} 
                     setCameraData={setCameraData} 
@@ -403,7 +403,7 @@ export default function App() {
                     onVisionDetection={handleVisionDetection}
                   />
                 </div>
-                <div className="lg:col-span-2 h-full">
+                <div className="lg:col-span-2 flex flex-col gap-6">
                   <SafetyMonitor 
                     alerts={alerts} 
                     onResolveAlert={handleResolveAlert} 

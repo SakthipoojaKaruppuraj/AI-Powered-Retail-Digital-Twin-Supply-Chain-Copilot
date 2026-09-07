@@ -57,7 +57,7 @@ export default function InventorySync({ shelves = [], cameraData = {}, discrepan
   const hasActiveMismatches = mismatches.length > 0 || discrepancyIdsToResolve.length > 0;
 
   return (
-    <div className="glass-panel p-6 rounded-2xl flex flex-col h-full">
+    <div className="glass-panel p-6 rounded-2xl flex flex-col">
       {/* Header */}
       <div className="flex justify-between items-start mb-5">
         <div>
